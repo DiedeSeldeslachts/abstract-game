@@ -240,6 +240,26 @@ h1 {
     0 0 1px rgba(255, 247, 232, 0.35);
 }
 
+.piece-commander {
+  transform: translateY(0) scale(1.08);
+  font-size: 1.08em;
+  filter: drop-shadow(0 0 8px rgba(255, 218, 120, 0.55));
+}
+
+.piece-commander.piece-white {
+  color: #fff7dd;
+  text-shadow:
+    0 1px 0 rgba(54, 30, 13, 0.95),
+    0 0 6px rgba(255, 214, 111, 0.72);
+}
+
+.piece-commander.piece-black {
+  color: #2f1b0f;
+  text-shadow:
+    0 1px 0 rgba(255, 243, 205, 0.82),
+    0 0 6px rgba(255, 208, 92, 0.58);
+}
+
 .coord {
   position: absolute;
   z-index: 1;

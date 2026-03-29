@@ -26,17 +26,50 @@ function placePiece(state, row, col, player, type, suffix = "1") {
   assert.equal(counts.white, 16);
   assert.equal(counts.black, 16);
   assert.equal(state.currentPlayer, "white");
-  assert.equal(getPiece(state, 7, 4)?.type, "king");
-  assert.equal(getPiece(state, 0, 3)?.type, "queen");
+  assert.equal(getPiece(state, 7, 3)?.type, "commander");
+  assert.equal(getPiece(state, 7, 4)?.type, "commander");
+  assert.equal(getPiece(state, 0, 3)?.type, "commander");
+  assert.equal(getPiece(state, 0, 4)?.type, "commander");
 })();
 
 (function testUniversalKingMovement() {
   const state = createInitialState();
   const pawnMoves = getLegalMoves(state, 6, 4).map((square) => toAlgebraic(square)).sort();
-  const kingMoves = getLegalMoves(state, 7, 4);
+  const commanderMoves = getLegalMoves(state, 7, 4);
 
   assert.deepEqual(pawnMoves, ["d3", "e3", "f3"]);
-  assert.equal(kingMoves.length, 0);
+  assert.equal(commanderMoves.length, 0);
+})();
+
+(function testCommanderCanMoveTwoSteps() {
+  const state = createEmptyState();
+
+  placePiece(state, 4, 4, "white", "commander");
+  placePiece(state, 2, 4, "black", "pawn");
+
+  const moves = getLegalMoves(state, 4, 4);
+
+  assert.ok(moves.some((move) => move.row === 2 && move.col === 4 && move.capture));
+})();
+
+(function testCommanderCannotContinueAfterFirstStepCapture() {
+  const state = createEmptyState();
+
+  placePiece(state, 4, 4, "white", "commander");
+  placePiece(state, 3, 3, "white", "pawn");
+  placePiece(state, 3, 5, "white", "pawn");
+  placePiece(state, 4, 3, "white", "pawn");
+  placePiece(state, 4, 5, "white", "pawn");
+  placePiece(state, 5, 3, "white", "pawn");
+  placePiece(state, 5, 4, "white", "pawn");
+  placePiece(state, 5, 5, "white", "pawn");
+  placePiece(state, 3, 4, "black", "pawn");
+  placePiece(state, 2, 4, "black", "bishop");
+
+  const moves = getLegalMoves(state, 4, 4);
+
+  assert.ok(moves.some((move) => move.row === 3 && move.col === 4 && move.capture));
+  assert.ok(!moves.some((move) => move.row === 2 && move.col === 4));
 })();
 
 (function testBlockedFriendlySquareAndEnemyCapture() {

@@ -1,8 +1,7 @@
 import { applyMove, getAllLegalMoves, getPiece } from "./game.js";
 
 const CAPTURE_VALUES = {
-  king: 12,
-  queen: 10,
+  commander: 11,
   rook: 8,
   bishop: 6,
   knight: 6,

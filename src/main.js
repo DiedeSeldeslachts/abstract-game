@@ -13,16 +13,14 @@ const AI_MOVE_DELAY_MS = 320;
 
 const PIECE_SYMBOLS = {
   white: {
-    king: "♙",
-    queen: "♙",
+    commander: "♔",
     rook: "♙",
     bishop: "♙",
     knight: "♙",
     pawn: "♙"
   },
   black: {
-    king: "♟",
-    queen: "♟",
+    commander: "♚",
     rook: "♟",
     bishop: "♟",
     knight: "♟",
@@ -119,7 +117,7 @@ function renderBoard() {
 
       if (piece) {
         const glyph = document.createElement("span");
-        glyph.className = `piece piece-${piece.player}`;
+        glyph.className = `piece piece-${piece.player} piece-${piece.type}`;
         glyph.textContent = PIECE_SYMBOLS[piece.player][piece.type];
         square.append(glyph);
       }
@@ -142,7 +140,7 @@ function renderSidebar() {
     const moveCount = selectedMoves.length;
     selectionTextElement.textContent = `${formatPieceName(piece)} on ${toAlgebraic(selectedSquare)} has ${moveCount} legal ${moveCount === 1 ? "move" : "moves"}.`;
   } else {
-    selectionTextElement.textContent = "Select one of the current player's pieces to reveal its adjacent legal moves.";
+    selectionTextElement.textContent = "Select one of the current player's pieces to reveal its legal moves.";
   }
 
   if (!state.lastAction) {
@@ -180,11 +178,11 @@ function renderStatus() {
 
   if (selectedSquare) {
     const piece = state.board[selectedSquare.row][selectedSquare.col];
-    statusTextElement.textContent = `${formatPieceName(piece)} is selected. Choose one highlighted adjacent square.`;
+    statusTextElement.textContent = `${formatPieceName(piece)} is selected. Choose one highlighted legal destination.`;
     return;
   }
 
-  statusTextElement.textContent = `${titleCase(state.currentPlayer)} to move. Every piece moves one square in any direction.`;
+  statusTextElement.textContent = `${titleCase(state.currentPlayer)} to move. Most pieces move one square; commanders can move up to two adjacent steps.`;
 }
 
 function render() {

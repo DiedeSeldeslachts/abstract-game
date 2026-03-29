@@ -1,6 +1,6 @@
 export const BOARD_SIZE = 8;
 
-const BACK_RANK = ["rook", "knight", "bishop", "queen", "king", "bishop", "knight", "rook"];
+const BACK_RANK = ["rook", "knight", "bishop", "commander", "commander", "bishop", "knight", "rook"];
 const FILES = ["a", "b", "c", "d", "e", "f", "g", "h"];
 const KING_STEPS = [
   { row: -1, col: -1 },
@@ -19,8 +19,8 @@ function createEmptyBoard() {
 
 function createPieceCounters() {
   return {
-    white: { king: 0, queen: 0, rook: 0, bishop: 0, knight: 0, pawn: 0 },
-    black: { king: 0, queen: 0, rook: 0, bishop: 0, knight: 0, pawn: 0 }
+    white: { commander: 0, rook: 0, bishop: 0, knight: 0, pawn: 0 },
+    black: { commander: 0, rook: 0, bishop: 0, knight: 0, pawn: 0 }
   };
 }
 
@@ -42,13 +42,7 @@ function cloneBoard(board) {
   return board.map((row) => row.slice());
 }
 
-function getLegalMovesForPlayer(state, row, col, player) {
-  const piece = getPiece(state, row, col);
-
-  if (!piece || piece.player !== player) {
-    return [];
-  }
-
+function getSingleStepMovesForPlayer(state, row, col, player) {
   const moves = [];
 
   for (const step of KING_STEPS) {
@@ -73,6 +67,62 @@ function getLegalMovesForPlayer(state, row, col, player) {
   }
 
   return moves;
+}
+
+function getCommanderMovesForPlayer(state, row, col, player) {
+  const movesBySquare = new Map();
+  const firstStepMoves = getSingleStepMovesForPlayer(state, row, col, player);
+
+  for (const move of firstStepMoves) {
+    movesBySquare.set(`${move.row},${move.col}`, move);
+  }
+
+  for (const firstStep of firstStepMoves) {
+    if (firstStep.capture) {
+      continue;
+    }
+
+    for (const step of KING_STEPS) {
+      const nextRow = firstStep.row + step.row;
+      const nextCol = firstStep.col + step.col;
+
+      if (!isInsideBoard(nextRow, nextCol)) {
+        continue;
+      }
+
+      if (nextRow === row && nextCol === col) {
+        continue;
+      }
+
+      const target = state.board[nextRow][nextCol];
+
+      if (target && target.player === player) {
+        continue;
+      }
+
+      movesBySquare.set(`${nextRow},${nextCol}`, {
+        row: nextRow,
+        col: nextCol,
+        capture: Boolean(target)
+      });
+    }
+  }
+
+  return Array.from(movesBySquare.values());
+}
+
+function getLegalMovesForPlayer(state, row, col, player) {
+  const piece = getPiece(state, row, col);
+
+  if (!piece || piece.player !== player) {
+    return [];
+  }
+
+  if (piece.type === "commander") {
+    return getCommanderMovesForPlayer(state, row, col, player);
+  }
+
+  return getSingleStepMovesForPlayer(state, row, col, player);
 }
 
 export function createEmptyState(currentPlayer = "white") {
