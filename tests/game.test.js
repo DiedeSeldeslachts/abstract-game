@@ -33,7 +33,7 @@ function placePiece(state, row, col, player, type, suffix = "1") {
   assert.equal(getPiece(state, 8, 4)?.type, "commander");
 })();
 
-(function testUniversalKingMovement() {
+(function testUniversalAdjacentMovement() {
   const state = createInitialState();
   const pawnMoves = getLegalMoves(state, 1, 4).map((square) => toAlgebraic(square)).sort();
 
@@ -63,7 +63,7 @@ function placePiece(state, row, col, player, type, suffix = "1") {
   placePiece(state, 5, 4, "white", "pawn");
   placePiece(state, 5, 5, "white", "pawn");
   placePiece(state, 3, 4, "black", "pawn");
-  placePiece(state, 2, 4, "black", "bishop");
+  placePiece(state, 2, 4, "black", "pawn");
 
   const moves = getLegalMoves(state, 4, 4);
 
@@ -74,9 +74,9 @@ function placePiece(state, row, col, player, type, suffix = "1") {
 (function testBlockedFriendlySquareAndEnemyCapture() {
   const state = createEmptyState();
 
-  placePiece(state, 4, 3, "white", "queen");
+  placePiece(state, 4, 3, "white", "pawn");
   placePiece(state, 5, 2, "white", "pawn");
-  placePiece(state, 3, 4, "black", "bishop");
+  placePiece(state, 3, 4, "black", "pawn");
 
   const moves = getLegalMoves(state, 4, 3);
 
@@ -88,8 +88,8 @@ function placePiece(state, row, col, player, type, suffix = "1") {
 (function testLastCaptureWins() {
   const state = createEmptyState();
 
-  placePiece(state, 7, 0, "white", "rook");
-  placePiece(state, 6, 1, "black", "king");
+  placePiece(state, 7, 0, "white", "pawn");
+  placePiece(state, 6, 1, "black", "pawn");
 
   const nextState = applyMove(state, { row: 7, col: 0 }, { row: 6, col: 1 });
   const counts = getRemainingPieceCounts(nextState);
@@ -102,7 +102,7 @@ function placePiece(state, row, col, player, type, suffix = "1") {
 (function testAISelectsAvailableCapture() {
   const state = createEmptyState("black");
 
-  placePiece(state, 4, 4, "black", "rook");
+  placePiece(state, 4, 4, "black", "pawn");
   placePiece(state, 3, 3, "white", "pawn");
 
   const move = chooseAIMove(state, "black");
@@ -118,7 +118,7 @@ function placePiece(state, row, col, player, type, suffix = "1") {
 (function testAIIsDeterministicForSameState() {
   const state = createEmptyState("black");
 
-  placePiece(state, 4, 4, "black", "rook");
+  placePiece(state, 4, 4, "black", "pawn");
   placePiece(state, 1, 1, "white", "pawn");
 
   const first = chooseAIMove(state, "black");

@@ -1,17 +1,15 @@
-import { applyMove, getAllLegalMoves, getPiece, playerControlsBothTowns } from "./game.js";
+import {
+  applyMove,
+  getAllLegalMoves,
+  getPiece,
+  playerControlsBothTowns,
+  TOWN_POSITIONS
+} from "./game.js";
 
 const CAPTURE_VALUES = {
   commander: 11,
-  rook: 8,
-  bishop: 6,
-  knight: 6,
   pawn: 4
 };
-
-const TOWN_POSITIONS = [
-  { row: 4, col: 2 }, // c5
-  { row: 4, col: 5 }  // f5
-];
 
 function getOpponent(player) {
   return player === "white" ? "black" : "white";

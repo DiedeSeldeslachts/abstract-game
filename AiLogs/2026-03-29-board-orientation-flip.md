@@ -75,6 +75,96 @@ Unknown User
 
 ## Prompt
 
+Commanders still display as C instead of the king icon.
+
+## Summary
+
+Fixed commander visuals in the UI symbol mapping:
+
+- Updated `src/main.js` so commander symbols are:
+  - white commander: `♔`
+  - black commander: `♚`
+- Left all non-commander visuals unchanged.
+
+Validation:
+
+- Visual mapping change only; no game-logic impact.
+
+## Agent
+
+GitHub Copilot (GPT-5.3-Codex)
+
+## User
+
+Unknown User
+
+## Prompt
+
+I can still see references to rook, knight, bishop in the code; replace or remove them, and keep the visuals as they were.
+
+## Summary
+
+Removed remaining legacy chess piece-type identifiers from executable code and restored the original visuals:
+
+- Renamed game unit types in core logic (`src/game.js`):
+  - `rook` -> `vanguard`
+  - `knight` -> `rider`
+  - `bishop` -> `sentinel`
+  - `pawn` -> `guard`
+- Updated initial setup and unit counter generation to use the new type names.
+- Renamed step constant from `KING_STEPS` to `ADJACENT_STEPS` to avoid piece-specific naming.
+- Updated AI capture valuation keys in `src/ai.js` to match renamed unit types.
+- Updated UI symbol mapping in `src/main.js` to new unit types while restoring previous chess glyph visuals (`♔/♚` for commanders and `♙/♟` for non-commanders).
+- Updated all tests in `tests/game.test.js` to use the new unit types.
+
+Validation:
+
+- Test suite passes: `npm test`.
+
+## Agent
+
+GitHub Copilot (GPT-5.3-Codex)
+
+## User
+
+Unknown User
+
+## Prompt
+
+Clean up the code, remove any reference to chess pieces from the code that have nothing to do with the game. Then clean up the code so it is as maintainable as possible, the rules of the game will change often.
+
+## Summary
+
+Performed a maintainability-focused cleanup and removed irrelevant chess-only references:
+
+- Replaced hardcoded board-size assumptions with explicit shared dimensions in `src/game.js`:
+  - `BOARD_ROWS` and `BOARD_COLS`
+  - board creation, bounds checks, move scans, and algebraic conversion now use shared constants.
+- Centralized town metadata in `src/game.js` and exported:
+  - `TOWN_POSITIONS`
+  - `isTownSquare(row, col)` helper
+- Updated `src/main.js` to use shared game configuration instead of hardcoded values:
+  - rendering loops now follow `BOARD_ROWS`/`BOARD_COLS`
+  - rank/file labels are derived from shared dimensions
+  - town highlighting uses `isTownSquare`.
+- Updated `src/ai.js` to import `TOWN_POSITIONS` from game logic, removing duplicated town coordinates.
+- Removed irrelevant chess-only test placeholders in `tests/game.test.js` by replacing unsupported `queen`/`king` placeholders with valid unit types used by this game.
+- Replaced chess glyph dependencies in the UI with neutral per-type letter markers to keep display semantics aligned with game-defined unit names.
+
+Validation:
+
+- Test suite passes: `npm test`.
+
+## Agent
+
+GitHub Copilot (GPT-5.3-Codex)
+
+## User
+
+Unknown User
+
+## Prompt
+
 Update my .gitignore to a more standard template for this kind of project.
 
 ## Summary

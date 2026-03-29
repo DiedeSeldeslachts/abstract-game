@@ -1,8 +1,11 @@
 import {
   applyMove,
+  BOARD_COLS,
+  BOARD_ROWS,
   createInitialState,
   getLegalMoves,
   getRemainingPieceCounts,
+  isTownSquare,
   playerControlsBothTowns,
   toAlgebraic
 } from "./game.js";
@@ -15,16 +18,10 @@ const AI_MOVE_DELAY_MS = 320;
 const PIECE_SYMBOLS = {
   white: {
     commander: "♔",
-    rook: "♙",
-    bishop: "♙",
-    knight: "♙",
     pawn: "♙"
   },
   black: {
     commander: "♚",
-    rook: "♟",
-    bishop: "♟",
-    knight: "♟",
     pawn: "♟"
   }
 };
@@ -75,8 +72,7 @@ function getSquareClasses(row, col) {
     classes.push("is-destination");
   }
 
-  // Mark town squares
-  if ((row === 4 && col === 2) || (row === 4 && col === 5)) {
+  if (isTownSquare(row, col)) {
     classes.push("is-town");
   }
 
@@ -89,11 +85,11 @@ function createCoordinateLabels(row, col) {
   if (col === 0) {
     const rank = document.createElement("span");
     rank.className = "coord rank";
-    rank.textContent = String(9 - row);
+    rank.textContent = String(BOARD_ROWS - row);
     wrapper.append(rank);
   }
 
-  if (row === 8) {
+  if (row === BOARD_ROWS - 1) {
     const file = document.createElement("span");
     file.className = "coord file";
     file.textContent = String.fromCharCode(97 + col);
@@ -106,8 +102,8 @@ function createCoordinateLabels(row, col) {
 function renderBoard() {
   boardElement.innerHTML = "";
 
-  for (let row = 0; row < 9; row += 1) {
-    for (let col = 0; col < 8; col += 1) {
+  for (let row = 0; row < BOARD_ROWS; row += 1) {
+    for (let col = 0; col < BOARD_COLS; col += 1) {
       const piece = state.board[row][col];
       const square = document.createElement("button");
 
@@ -117,7 +113,7 @@ function renderBoard() {
       square.dataset.col = String(col);
       square.setAttribute("role", "gridcell");
 
-      const isTown = (row === 4 && col === 2) || (row === 4 && col === 5);
+      const isTown = isTownSquare(row, col);
       const townLabel = isTown ? " (town)" : "";
       const pieceLabel = piece ? formatPieceName(piece) : `Empty square${townLabel}`;
       square.setAttribute("aria-label", `${toAlgebraic({ row, col })}: ${pieceLabel}`);

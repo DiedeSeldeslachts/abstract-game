@@ -1,12 +1,14 @@
-export const BOARD_SIZE = 9;
+export const BOARD_ROWS = 9;
+export const BOARD_COLS = 8;
 
-const BACK_RANK = ["rook", "knight", "bishop", "commander", "commander", "bishop", "knight", "rook"];
+const BACK_RANK = ["pawn", "pawn", "pawn", "commander", "commander", "pawn", "pawn", "pawn"];
 const FILES = ["a", "b", "c", "d", "e", "f", "g", "h"];
-const TOWN_POSITIONS = [
+export const TOWN_POSITIONS = [
   { row: 4, col: 2 }, // c5
   { row: 4, col: 5 }  // f5
 ];
-const KING_STEPS = [
+const UNIT_TYPES = ["commander", "pawn"];
+const ADJACENT_STEPS = [
   { row: -1, col: -1 },
   { row: -1, col: 0 },
   { row: -1, col: 1 },
@@ -18,13 +20,17 @@ const KING_STEPS = [
 ];
 
 function createEmptyBoard() {
-  return Array.from({ length: BOARD_SIZE }, () => Array.from({ length: BOARD_SIZE }, () => null));
+  return Array.from({ length: BOARD_ROWS }, () => Array.from({ length: BOARD_COLS }, () => null));
+}
+
+function createPlayerPieceCounter() {
+  return Object.fromEntries(UNIT_TYPES.map((type) => [type, 0]));
 }
 
 function createPieceCounters() {
   return {
-    white: { commander: 0, rook: 0, bishop: 0, knight: 0, pawn: 0 },
-    black: { commander: 0, rook: 0, bishop: 0, knight: 0, pawn: 0 }
+    white: createPlayerPieceCounter(),
+    black: createPlayerPieceCounter()
   };
 }
 
@@ -49,7 +55,7 @@ function cloneBoard(board) {
 function getSingleStepMovesForPlayer(state, row, col, player) {
   const moves = [];
 
-  for (const step of KING_STEPS) {
+  for (const step of ADJACENT_STEPS) {
     const nextRow = row + step.row;
     const nextCol = col + step.col;
 
@@ -86,7 +92,7 @@ function getCommanderMovesForPlayer(state, row, col, player) {
       continue;
     }
 
-    for (const step of KING_STEPS) {
+    for (const step of ADJACENT_STEPS) {
       const nextRow = firstStep.row + step.row;
       const nextCol = firstStep.col + step.col;
 
@@ -148,7 +154,7 @@ export function createInitialState() {
   const state = createEmptyState("white");
   const counters = createPieceCounters();
 
-  for (let col = 0; col < 8; col += 1) {
+  for (let col = 0; col < BOARD_COLS; col += 1) {
     state.board[0][col] = makePiece("white", BACK_RANK[col], counters);
     state.board[1][col] = makePiece("white", "pawn", counters);
     state.board[7][col] = makePiece("black", "pawn", counters);
@@ -167,7 +173,7 @@ export function getPiece(state, row, col) {
 }
 
 export function isInsideBoard(row, col) {
-  return row >= 0 && row < BOARD_SIZE && col >= 0 && col < BOARD_SIZE;
+  return row >= 0 && row < BOARD_ROWS && col >= 0 && col < BOARD_COLS;
 }
 
 export function getLegalMoves(state, row, col) {
@@ -185,8 +191,8 @@ export function getAllLegalMoves(state, player = state.currentPlayer) {
 
   const allMoves = [];
 
-  for (let row = 0; row < BOARD_SIZE; row += 1) {
-    for (let col = 0; col < BOARD_SIZE; col += 1) {
+  for (let row = 0; row < BOARD_ROWS; row += 1) {
+    for (let col = 0; col < BOARD_COLS; col += 1) {
       const piece = state.board[row][col];
 
       if (!piece || piece.player !== player) {
@@ -231,6 +237,10 @@ export function playerControlsBothTowns(state, player) {
     }
   }
   return true;
+}
+
+export function isTownSquare(row, col) {
+  return TOWN_POSITIONS.some((town) => town.row === row && town.col === col);
 }
 
 export function applyMove(state, from, to) {
@@ -310,5 +320,5 @@ export function applyMove(state, from, to) {
 }
 
 export function toAlgebraic(square) {
-  return `${FILES[square.col]}${BOARD_SIZE - square.row}`;
+  return `${FILES[square.col]}${BOARD_ROWS - square.row}`;
 }
