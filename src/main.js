@@ -194,7 +194,7 @@ function renderStatus() {
     return;
   }
 
-  statusTextElement.textContent = `${titleCase(state.currentPlayer)} to move. Most pieces move one square; commanders can move up to two adjacent steps. Hold both towns for one full round to win!`;
+  statusTextElement.textContent = `${titleCase(state.currentPlayer)} to move. Most pieces move one square; pawns adjacent to a commander can hop over friendly pieces. Hold both towns for one full round to win!`;
 }
 
 function render() {

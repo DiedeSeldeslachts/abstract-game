@@ -1,11 +1,11 @@
 # Kingstep
 
-Kingstep is a chess-inspired abstract capture game played on a standard 8x8 board.
+Kingstep is a chess-inspired abstract capture game played on a 9x8 board.
 Each side begins with a modified chess-style army where the queen and king are replaced
 by two commanders on the back rank. Most pieces move exactly one square in any direction,
-while commanders may move one or two adjacent steps in a single turn. There is no check,
+while commanders grant adjacent friendly pawns a hop move over friendly pieces. There is no check,
 checkmate, castling, en passant, or promotion.
-The only way to win is to capture every opposing piece.
+You win by capturing every opposing piece or by controlling both town squares through one full round.
 
 In this implementation, you play as White and the AI controls Black.
 

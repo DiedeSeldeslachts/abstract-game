@@ -2,141 +2,131 @@
 
 ## Overview
 
-Kingstep is a two-player abstract strategy game derived from chess. It uses a 9-rank board
-(one rank longer than standard chess) with a chess-like starting arrangement, but with two 
-commanders on each back rank instead of a king and queen. Most pieces move the same way: one 
-square in any direction, like a chess king. Commanders are stronger and may move one or two 
-adjacent steps in a single turn. Two towns occupy the furthest rank and act as a strategic 
-objective: controlling both towns until the next turn gives an alternate win condition. 
-The primary win condition remains removing every opposing piece from the board.
+Kingstep is a two-player abstract strategy game played on a 9x8 board.
+Each side has two commanders and fourteen pawns.
+All pieces move one square in any direction.
+Commanders no longer move two squares; instead, each commander grants a local aura:
+any friendly pawn adjacent to that commander can hop over a friendly adjacent piece.
+
+You can win by eliminating all opposing pieces or by controlling both town squares
+through one full opponent turn.
 
 ## Components
 
-- 1 board with 8 files and 9 ranks
-- 2 towns (neutral neutral markers) on rank 9
+- 1 board with 9 ranks and 8 files
+- 2 town squares at c5 and f5
 - 16 white pieces:
-	- 2 commanders
-	- 2 rooks
-	- 2 bishops
-	- 2 knights
-	- 8 pawns
-- 16 black pieces with the same distribution
+  - 2 commanders
+  - 14 pawns
+- 16 black pieces:
+  - 2 commanders
+  - 14 pawns
 
 ## Objective
 
 Win by either:
-1. Capturing all of the opponent's pieces, or
-2. Controlling both towns at the start of your turn (both towns must be occupied by your pieces)
+
+1. Capturing every opposing piece, or
+2. Starting your turn while controlling both towns (c5 and f5).
 
 ## Setup
 
-1. Place the board between the two players with each player viewing the board from one side.
-2. The furthest rank (rank 9, where each player can see it as closest to them) has:
-	- a town on file c
-	- a town on file f
-   These towns are neutral and unoccupied at setup.
-3. Set up the remaining pieces exactly as in standard chess on ranks 1-8.
-4. White takes the first turn.
-
-Standard starting order on each back rank from left to right is:
-
-- rook, knight, bishop, commander, commander, bishop, knight, rook
-
-Each pawn begins on the rank directly in front of that side's back rank (rank 2 for white, rank 7 for black).
+1. Place the board between both players.
+2. Mark c5 and f5 as town squares.
+3. White setup:
+  - Back rank (rank 9): pawn, pawn, pawn, commander, commander, pawn, pawn, pawn
+  - Front rank (rank 8): eight pawns
+4. Black setup:
+  - Back rank (rank 1): pawn, pawn, pawn, commander, commander, pawn, pawn, pawn
+  - Front rank (rank 2): eight pawns
+5. White takes the first turn.
 
 ## Turn Structure
 
 On your turn:
 
 1. Choose one of your pieces.
-2. Move it according to its movement rule.
-3. If the destination square contains an opponent's piece, capture it by replacing it.
-4. End your turn. The other player then takes a turn.
+2. Move it to a legal destination.
+3. If the destination contains an opposing piece, capture it.
+4. End your turn.
 
-There are no extra actions beyond that single move.
+There are no bonus actions.
 
 ## Actions and Move Rules
 
-- Rooks, bishops, knights, and pawns all use the same movement rule:
-	- exactly one square to any adjacent square, including diagonals.
-- Commanders may move in either of these ways:
-	- one square to any adjacent square, including diagonals, or
-	- two adjacent king-style steps in one turn.
-- You may move into an empty square.
-- You may capture an opponent's piece by moving onto its square.
-- You may not move off the board.
-- You may not move onto a square occupied by one of your own pieces.
-- A commander cannot jump over occupied squares when using two steps:
-	- if the first step would capture, the move ends there;
-	- the second step is only allowed when the first step lands on an empty square.
+- All pieces may move exactly one square to any adjacent square, including diagonals.
+- You may move into empty squares or capture by moving onto an enemy square.
+- You may not move off-board.
+- You may not move onto a square occupied by a friendly piece.
 
-Piece types matter for setup and commander movement only.
+Commander aura rule:
+
+- A pawn that is adjacent to at least one friendly commander gains hop options.
+- A hop is a move two squares in a straight adjacent direction.
+- The first square in that direction must contain a friendly piece to hop over.
+- The landing square must be on the board and not occupied by a friendly piece.
+- The landing square may be empty or occupied by an enemy piece (capture).
+
+Commanders themselves do not hop and move only one square.
 
 ## Special Rules and Edge Cases
 
-- There is no check.
-- There is no checkmate.
-- There is no king piece in this version of the game.
+- There is no check or checkmate.
 - There is no castling.
-- There is no pawn double-step.
-- There is no en passant.
 - There is no promotion.
-- Because a player wins only by removing all opposing pieces, there are no royal-piece conditions.
+- There is no en passant.
+- No piece has a forward-only rule; movement is fully adjacent in all directions.
+- A pawn can have both normal one-step moves and commander-aura hop moves in the same turn.
+- A pawn only needs to be adjacent to one friendly commander to gain hop moves.
 
 ## End of Game
 
 The game ends immediately when either condition is met:
-1. One player has no pieces remaining on the board.
-2. A player's turn begins while that player occupies both towns.
+
+1. One player has no pieces left.
+2. A player's turn begins while that player still controls both towns.
 
 ## Winning
 
 You win if either of the following becomes true:
-1. The opponent has zero pieces left on the board, or
-2. Your turn begins while you have pieces occupying both towns (on files c and f of rank 9).
 
-If you occupy both towns on your move, you do not win immediately. You must still control both
-towns after your opponent takes their next turn.
+1. The opponent has zero pieces remaining, or
+2. Your turn begins and you occupy both c5 and f5.
+
+If you occupy both towns on your move, you do not win immediately.
+You must still occupy both towns when your next turn begins.
 
 ## Examples
 
-### Example 1: Pawn movement
+### Example 1: Normal adjacent move
 
-A pawn on e2 may move to d3, e3, or f3 if those squares are empty or occupied by enemy pieces.
-It may not move two squares forward, and it may not move onto a square occupied by a friendly piece.
+A pawn on e4 may move to any adjacent square (including diagonals) that is either empty
+or occupied by an enemy piece.
 
-### Example 2: Commander two-step move
+### Example 2: Commander aura enables a hop
 
-If your commander is on d4 and both d5 and e6 are legal squares, you may move from d4 to d5 and
-then to e6 in the same turn. This is still one move action.
+White commander on e5, white pawn on d5, white pawn on d4.
+Because d5 is adjacent to a commander, the pawn on d5 may hop over the friendly pawn on d4
+to d3, if d3 is not occupied by a white piece.
 
-If d5 contains an enemy piece, your commander may capture on d5, but the move ends immediately and
-you do not take a second step.
+### Example 3: Hop capture
 
-### Example 3: Commander capture
+Using the previous position, if d3 contains a black piece, the pawn on d5 may hop to d3
+and capture it.
 
-If your commander is on d4, d5 is empty, and the opponent has a piece on d6, your commander may
-capture that piece by moving two steps from d4 to d6 through d5.
+### Example 4: No adjacent commander, no hop
 
-### Example 4: No checkmate concept
+If the commander on e5 moves away and the pawn on d5 is no longer adjacent to any friendly commander,
+that pawn loses all hop options and can only use normal one-step moves.
 
-If your commander moves next to any opposing piece, that does not create check. The opposing player simply takes a normal turn.
+### Example 5: Town control win timing
 
-### Example 5: Towns on rank 9
-
-The two towns occupy files c and f on rank 9. A piece can move onto a town square like any other empty square.
-If white moves a piece to c9 and already has a piece on f9 (or moves there on the same turn), white creates a town-control threat.
+If white occupies both c5 and f5, white creates a pending town win.
 White wins only if both towns are still occupied by white when white's next turn begins.
-If white captures an enemy piece on c9, the town square is now occupied by a white piece.
 
 ## Revision Notes
 
-- Replaced the template with a complete rulebook for Kingstep.
-- Established standard chess setup, universal king-style movement, and total-elimination victory.
-- Replaced king and queen with two commanders per side on the back rank.
-- Added commander movement: one step or two adjacent king-style steps in one turn.
-- Extended board from 8x8 to 9x8 (one additional rank).
-- Added two neutral towns on rank 9 (files b and g) as an alternate win condition.
-- Updated win conditions to allow victory by controlling both towns until the start of the next turn.
-- Moved towns one file inward to files c and f.
-- Changed town victory timing: controlling both towns must be held through one full round (no instant town win).
+- Removed commander two-space movement.
+- Added commander aura: adjacent friendly pawns can hop over friendly adjacent pieces.
+- Clarified hop legality (adjacency requirement, blocker requirement, landing constraints).
+- Rewrote examples and edge cases to match the new commander-aura system.

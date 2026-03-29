@@ -40,7 +40,7 @@ function placePiece(state, row, col, player, type, suffix = "1") {
   assert.deepEqual(pawnMoves, ["d7", "e7", "f7"]);
 })();
 
-(function testCommanderCanMoveTwoSteps() {
+(function testCommanderMovesSingleStepOnly() {
   const state = createEmptyState();
 
   placePiece(state, 4, 4, "white", "commander");
@@ -48,27 +48,33 @@ function placePiece(state, row, col, player, type, suffix = "1") {
 
   const moves = getLegalMoves(state, 4, 4);
 
-  assert.ok(moves.some((move) => move.row === 2 && move.col === 4 && move.capture));
+  assert.ok(!moves.some((move) => move.row === 2 && move.col === 4));
+  assert.ok(moves.some((move) => move.row === 3 && move.col === 4));
 })();
 
-(function testCommanderCannotContinueAfterFirstStepCapture() {
+(function testAdjacentPawnCanHopOverFriendlyPiece() {
   const state = createEmptyState();
 
   placePiece(state, 4, 4, "white", "commander");
-  placePiece(state, 3, 3, "white", "pawn");
-  placePiece(state, 3, 5, "white", "pawn");
   placePiece(state, 4, 3, "white", "pawn");
-  placePiece(state, 4, 5, "white", "pawn");
-  placePiece(state, 5, 3, "white", "pawn");
-  placePiece(state, 5, 4, "white", "pawn");
-  placePiece(state, 5, 5, "white", "pawn");
-  placePiece(state, 3, 4, "black", "pawn");
-  placePiece(state, 2, 4, "black", "pawn");
+  placePiece(state, 3, 3, "white", "pawn", "blocker");
+  placePiece(state, 2, 3, "black", "pawn", "target");
 
-  const moves = getLegalMoves(state, 4, 4);
+  const moves = getLegalMoves(state, 4, 3);
 
-  assert.ok(moves.some((move) => move.row === 3 && move.col === 4 && move.capture));
-  assert.ok(!moves.some((move) => move.row === 2 && move.col === 4));
+  assert.ok(moves.some((move) => move.row === 2 && move.col === 3 && move.capture));
+})();
+
+(function testPawnCannotHopWithoutAdjacentCommander() {
+  const state = createEmptyState();
+
+  placePiece(state, 4, 3, "white", "pawn");
+  placePiece(state, 3, 3, "white", "pawn", "blocker");
+  placePiece(state, 2, 3, "black", "pawn", "target");
+
+  const moves = getLegalMoves(state, 4, 3);
+
+  assert.ok(!moves.some((move) => move.row === 2 && move.col === 3));
 })();
 
 (function testBlockedFriendlySquareAndEnemyCapture() {

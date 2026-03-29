@@ -79,46 +79,67 @@ function getSingleStepMovesForPlayer(state, row, col, player) {
   return moves;
 }
 
-function getCommanderMovesForPlayer(state, row, col, player) {
-  const movesBySquare = new Map();
-  const firstStepMoves = getSingleStepMovesForPlayer(state, row, col, player);
+function hasAdjacentFriendlyCommander(state, row, col, player) {
+  for (const step of ADJACENT_STEPS) {
+    const commanderRow = row + step.row;
+    const commanderCol = col + step.col;
 
-  for (const move of firstStepMoves) {
-    movesBySquare.set(`${move.row},${move.col}`, move);
-  }
-
-  for (const firstStep of firstStepMoves) {
-    if (firstStep.capture) {
+    if (!isInsideBoard(commanderRow, commanderCol)) {
       continue;
     }
 
-    for (const step of ADJACENT_STEPS) {
-      const nextRow = firstStep.row + step.row;
-      const nextCol = firstStep.col + step.col;
+    const adjacentPiece = state.board[commanderRow][commanderCol];
 
-      if (!isInsideBoard(nextRow, nextCol)) {
-        continue;
-      }
-
-      if (nextRow === row && nextCol === col) {
-        continue;
-      }
-
-      const target = state.board[nextRow][nextCol];
-
-      if (target && target.player === player) {
-        continue;
-      }
-
-      movesBySquare.set(`${nextRow},${nextCol}`, {
-        row: nextRow,
-        col: nextCol,
-        capture: Boolean(target)
-      });
+    if (adjacentPiece && adjacentPiece.player === player && adjacentPiece.type === "commander") {
+      return true;
     }
   }
 
-  return Array.from(movesBySquare.values());
+  return false;
+}
+
+function getCommanderAuraHopMovesForPawn(state, row, col, player) {
+  if (!hasAdjacentFriendlyCommander(state, row, col, player)) {
+    return [];
+  }
+
+  const moves = [];
+
+  for (const step of ADJACENT_STEPS) {
+    const blockerRow = row + step.row;
+    const blockerCol = col + step.col;
+
+    if (!isInsideBoard(blockerRow, blockerCol)) {
+      continue;
+    }
+
+    const blocker = state.board[blockerRow][blockerCol];
+
+    if (!blocker || blocker.player !== player) {
+      continue;
+    }
+
+    const landingRow = blockerRow + step.row;
+    const landingCol = blockerCol + step.col;
+
+    if (!isInsideBoard(landingRow, landingCol)) {
+      continue;
+    }
+
+    const target = state.board[landingRow][landingCol];
+
+    if (target && target.player === player) {
+      continue;
+    }
+
+    moves.push({
+      row: landingRow,
+      col: landingCol,
+      capture: Boolean(target)
+    });
+  }
+
+  return moves;
 }
 
 function getLegalMovesForPlayer(state, row, col, player) {
@@ -129,10 +150,20 @@ function getLegalMovesForPlayer(state, row, col, player) {
   }
 
   if (piece.type === "commander") {
-    return getCommanderMovesForPlayer(state, row, col, player);
+    return getSingleStepMovesForPlayer(state, row, col, player);
   }
 
-  return getSingleStepMovesForPlayer(state, row, col, player);
+  const movesBySquare = new Map();
+
+  for (const move of getSingleStepMovesForPlayer(state, row, col, player)) {
+    movesBySquare.set(`${move.row},${move.col}`, move);
+  }
+
+  for (const move of getCommanderAuraHopMovesForPawn(state, row, col, player)) {
+    movesBySquare.set(`${move.row},${move.col}`, move);
+  }
+
+  return Array.from(movesBySquare.values());
 }
 
 export function createEmptyState(currentPlayer = "white") {
