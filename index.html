@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Kingstep</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero">
+        <p class="eyebrow">Abstract Capture Game</p>
+        <h1>Kingstep</h1>
+        <p class="hero-copy">
+          Standard chess setup. No check. No special moves. Every piece advances like a king,
+          and victory only comes from wiping out the opposing army.
+        </p>
+      </header>
+
+      <main class="layout">
+        <section class="board-panel">
+          <div class="board-toolbar">
+            <div>
+              <p class="toolbar-label">Current turn</p>
+              <p id="status-turn" class="turn-pill"></p>
+            </div>
+
+            <button id="restart-button" class="secondary-button" type="button">
+              Restart
+            </button>
+          </div>
+
+          <p id="status-text" class="status-text"></p>
+          <div id="board" class="board" role="grid" aria-label="Kingstep board"></div>
+        </section>
+
+        <aside class="sidebar">
+          <section class="card">
+            <h2>Battle State</h2>
+            <div class="metric-row">
+              <span>White remaining</span>
+              <strong id="white-remaining"></strong>
+            </div>
+            <div class="metric-row">
+              <span>Black remaining</span>
+              <strong id="black-remaining"></strong>
+            </div>
+            <div class="metric-row">
+              <span>White captures</span>
+              <strong id="white-captures"></strong>
+            </div>
+            <div class="metric-row">
+              <span>Black captures</span>
+              <strong id="black-captures"></strong>
+            </div>
+          </section>
+
+          <section class="card">
+            <h2>Selection</h2>
+            <p id="selection-text" class="support-text"></p>
+          </section>
+
+          <section class="card">
+            <h2>Last Action</h2>
+            <p id="last-action-text" class="support-text"></p>
+          </section>
+
+          <section class="card">
+            <h2>Rules Snapshot</h2>
+            <ul class="rules-list">
+              <li>Use the normal chess starting formation.</li>
+              <li>Every piece moves exactly one square in any direction.</li>
+              <li>You can capture by replacing an adjacent enemy piece.</li>
+              <li>Kings are capturable and have no special status.</li>
+              <li>You only win after the opponent has zero pieces left.</li>
+            </ul>
+          </section>
+        </aside>
+      </main>
+    </div>
+
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>
