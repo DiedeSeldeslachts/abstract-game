@@ -160,6 +160,7 @@ h1 {
 .board {
   display: grid;
   grid-template-columns: repeat(8, minmax(0, 1fr));
+  grid-template-rows: repeat(9, minmax(0, 1fr));
   gap: 0;
   border-radius: 20px;
   overflow: hidden;
@@ -276,6 +277,22 @@ h1 {
 .coord.file {
   right: 8px;
   bottom: 8px;
+}
+
+.square.is-town {
+  background: color-mix(in srgb, var(--light-square) 70%, rgba(255, 214, 111, 0.4)) !important;
+}
+
+.square.is-town.dark {
+  background: color-mix(in srgb, var(--dark-square) 85%, rgba(255, 214, 111, 0.3)) !important;
+}
+
+.town-marker {
+  position: relative;
+  z-index: 0;
+  display: inline-block;
+  font-size: 0.75em;
+  opacity: 0.6;
 }
 
 .sidebar {

@@ -3,6 +3,7 @@ import {
   createInitialState,
   getLegalMoves,
   getRemainingPieceCounts,
+  playerControlsBothTowns,
   toAlgebraic
 } from "./game.js";
 import { chooseAIMove } from "./ai.js";
@@ -74,6 +75,11 @@ function getSquareClasses(row, col) {
     classes.push("is-destination");
   }
 
+  // Mark town squares
+  if ((row === 4 && col === 2) || (row === 4 && col === 5)) {
+    classes.push("is-town");
+  }
+
   return classes.join(" ");
 }
 
@@ -83,11 +89,11 @@ function createCoordinateLabels(row, col) {
   if (col === 0) {
     const rank = document.createElement("span");
     rank.className = "coord rank";
-    rank.textContent = String(8 - row);
+    rank.textContent = String(9 - row);
     wrapper.append(rank);
   }
 
-  if (row === 7) {
+  if (row === 8) {
     const file = document.createElement("span");
     file.className = "coord file";
     file.textContent = String.fromCharCode(97 + col);
@@ -100,7 +106,7 @@ function createCoordinateLabels(row, col) {
 function renderBoard() {
   boardElement.innerHTML = "";
 
-  for (let row = 0; row < 8; row += 1) {
+  for (let row = 0; row < 9; row += 1) {
     for (let col = 0; col < 8; col += 1) {
       const piece = state.board[row][col];
       const square = document.createElement("button");
@@ -111,7 +117,9 @@ function renderBoard() {
       square.dataset.col = String(col);
       square.setAttribute("role", "gridcell");
 
-      const pieceLabel = piece ? formatPieceName(piece) : "Empty square";
+      const isTown = (row === 4 && col === 2) || (row === 4 && col === 5);
+      const townLabel = isTown ? " (town)" : "";
+      const pieceLabel = piece ? formatPieceName(piece) : `Empty square${townLabel}`;
       square.setAttribute("aria-label", `${toAlgebraic({ row, col })}: ${pieceLabel}`);
       square.append(createCoordinateLabels(row, col));
 
@@ -120,6 +128,11 @@ function renderBoard() {
         glyph.className = `piece piece-${piece.player} piece-${piece.type}`;
         glyph.textContent = PIECE_SYMBOLS[piece.player][piece.type];
         square.append(glyph);
+      } else if (isTown) {
+        const townMarker = document.createElement("span");
+        townMarker.className = "town-marker";
+        townMarker.textContent = "⛩";
+        square.append(townMarker);
       }
 
       boardElement.append(square);
@@ -167,7 +180,10 @@ function renderStatus() {
       : titleCase(state.currentPlayer);
 
   if (state.winner) {
-    statusTextElement.textContent = `${titleCase(state.winner)} wins by removing every opposing piece from the board.`;
+    const winReason = playerControlsBothTowns(state, state.winner)
+      ? "controlling both towns"
+      : "removing every opposing piece from the board";
+    statusTextElement.textContent = `${titleCase(state.winner)} wins by ${winReason}.`;
     return;
   }
 
@@ -182,7 +198,7 @@ function renderStatus() {
     return;
   }
 
-  statusTextElement.textContent = `${titleCase(state.currentPlayer)} to move. Most pieces move one square; commanders can move up to two adjacent steps.`;
+  statusTextElement.textContent = `${titleCase(state.currentPlayer)} to move. Most pieces move one square; commanders can move up to two adjacent steps. Hold both towns for one full round to win!`;
 }
 
 function render() {

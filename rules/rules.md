@@ -2,16 +2,18 @@
 
 ## Overview
 
-Kingstep is a two-player abstract strategy game derived from chess. It uses the same
-8x8 board and a chess-like starting arrangement, but with two commanders on each back
-rank instead of a king and queen. Most pieces move the same way: one square in any
-direction, like a chess king. Commanders are stronger and may move one or two adjacent
-steps in a single turn. The game is about steady attrition rather than checkmate, and
-the only way to win is to remove every opposing piece from the board.
+Kingstep is a two-player abstract strategy game derived from chess. It uses a 9-rank board
+(one rank longer than standard chess) with a chess-like starting arrangement, but with two 
+commanders on each back rank instead of a king and queen. Most pieces move the same way: one 
+square in any direction, like a chess king. Commanders are stronger and may move one or two 
+adjacent steps in a single turn. Two towns occupy the furthest rank and act as a strategic 
+objective: controlling both towns until the next turn gives an alternate win condition. 
+The primary win condition remains removing every opposing piece from the board.
 
 ## Components
 
-- 1 board with 8 files and 8 ranks
+- 1 board with 8 files and 9 ranks
+- 2 towns (neutral neutral markers) on rank 9
 - 16 white pieces:
 	- 2 commanders
 	- 2 rooks
@@ -22,19 +24,25 @@ the only way to win is to remove every opposing piece from the board.
 
 ## Objective
 
-Capture all of the opponent's pieces.
+Win by either:
+1. Capturing all of the opponent's pieces, or
+2. Controlling both towns at the start of your turn (both towns must be occupied by your pieces)
 
 ## Setup
 
 1. Place the board between the two players with each player viewing the board from one side.
-2. Set up the pieces exactly as in standard chess.
-3. White takes the first turn.
+2. The furthest rank (rank 9, where each player can see it as closest to them) has:
+	- a town on file c
+	- a town on file f
+   These towns are neutral and unoccupied at setup.
+3. Set up the remaining pieces exactly as in standard chess on ranks 1-8.
+4. White takes the first turn.
 
 Standard starting order on each back rank from left to right is:
 
 - rook, knight, bishop, commander, commander, bishop, knight, rook
 
-Each pawn begins on the rank directly in front of that side's back rank.
+Each pawn begins on the rank directly in front of that side's back rank (rank 2 for white, rank 7 for black).
 
 ## Turn Structure
 
@@ -77,13 +85,18 @@ Piece types matter for setup and commander movement only.
 
 ## End of Game
 
-The game ends immediately when one player has no pieces remaining on the board.
+The game ends immediately when either condition is met:
+1. One player has no pieces remaining on the board.
+2. A player's turn begins while that player occupies both towns.
 
 ## Winning
 
-You win if, after your move resolves, the opponent has zero pieces left on the board.
+You win if either of the following becomes true:
+1. The opponent has zero pieces left on the board, or
+2. Your turn begins while you have pieces occupying both towns (on files c and f of rank 9).
 
-There are no alternate win conditions.
+If you occupy both towns on your move, you do not win immediately. You must still control both
+towns after your opponent takes their next turn.
 
 ## Examples
 
@@ -109,9 +122,21 @@ capture that piece by moving two steps from d4 to d6 through d5.
 
 If your commander moves next to any opposing piece, that does not create check. The opposing player simply takes a normal turn.
 
+### Example 5: Towns on rank 9
+
+The two towns occupy files c and f on rank 9. A piece can move onto a town square like any other empty square.
+If white moves a piece to c9 and already has a piece on f9 (or moves there on the same turn), white creates a town-control threat.
+White wins only if both towns are still occupied by white when white's next turn begins.
+If white captures an enemy piece on c9, the town square is now occupied by a white piece.
+
 ## Revision Notes
 
 - Replaced the template with a complete rulebook for Kingstep.
 - Established standard chess setup, universal king-style movement, and total-elimination victory.
 - Replaced king and queen with two commanders per side on the back rank.
 - Added commander movement: one step or two adjacent king-style steps in one turn.
+- Extended board from 8x8 to 9x8 (one additional rank).
+- Added two neutral towns on rank 9 (files b and g) as an alternate win condition.
+- Updated win conditions to allow victory by controlling both towns until the start of the next turn.
+- Moved towns one file inward to files c and f.
+- Changed town victory timing: controlling both towns must be held through one full round (no instant town win).

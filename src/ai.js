@@ -1,4 +1,4 @@
-import { applyMove, getAllLegalMoves, getPiece } from "./game.js";
+import { applyMove, getAllLegalMoves, getPiece, playerControlsBothTowns } from "./game.js";
 
 const CAPTURE_VALUES = {
   commander: 11,
@@ -7,6 +7,11 @@ const CAPTURE_VALUES = {
   knight: 6,
   pawn: 4
 };
+
+const TOWN_POSITIONS = [
+  { row: 4, col: 2 }, // c5
+  { row: 4, col: 5 }  // f5
+];
 
 function getOpponent(player) {
   return player === "white" ? "black" : "white";
@@ -62,7 +67,39 @@ function scoreMove(state, move, player) {
   const exposurePenalty = countOpponentCapturesOnSquare(nextState, opponent, move.to) * 10;
   const winScore = nextState.winner === player ? 10_000 : 0;
 
-  return winScore + captureScore + approachScore - exposurePenalty;
+  // Town control scoring
+  const playerOwnsTowns = playerControlsBothTowns(nextState, player);
+  const opponentOwnsTowns = playerControlsBothTowns(nextState, opponent);
+  
+  let townScore = 0;
+  if (playerOwnsTowns) {
+    townScore = 1200; // Strong pressure: creates/maintains a pending town win threat
+  } else {
+    // Score individual town occupation
+    let townsOccupied = 0;
+    for (const townPos of TOWN_POSITIONS) {
+      const piece = nextState.board[townPos.row][townPos.col];
+      if (piece && piece.player === player) {
+        townsOccupied += 1;
+      }
+    }
+    townScore = townsOccupied * 150;
+  }
+
+  // Penalty if opponent gets closer to owning both towns
+  let opponentTownPenalty = 0;
+  if (!playerOwnsTowns && !opponentOwnsTowns) {
+    let opponentTownsOccupied = 0;
+    for (const townPos of TOWN_POSITIONS) {
+      const piece = nextState.board[townPos.row][townPos.col];
+      if (piece && piece.player === opponent) {
+        opponentTownsOccupied += 1;
+      }
+    }
+    opponentTownPenalty = opponentTownsOccupied * 200;
+  }
+
+  return winScore + captureScore + approachScore - exposurePenalty + townScore - opponentTownPenalty;
 }
 
 function compareMoveOrder(a, b) {

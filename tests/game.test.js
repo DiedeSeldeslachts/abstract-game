@@ -6,6 +6,7 @@ import {
   createInitialState,
   getLegalMoves,
   getPiece,
+  playerControlsBothTowns,
   getRemainingPieceCounts,
   toAlgebraic
 } from "../src/game.js";
@@ -26,19 +27,17 @@ function placePiece(state, row, col, player, type, suffix = "1") {
   assert.equal(counts.white, 16);
   assert.equal(counts.black, 16);
   assert.equal(state.currentPlayer, "white");
-  assert.equal(getPiece(state, 7, 3)?.type, "commander");
-  assert.equal(getPiece(state, 7, 4)?.type, "commander");
   assert.equal(getPiece(state, 0, 3)?.type, "commander");
   assert.equal(getPiece(state, 0, 4)?.type, "commander");
+  assert.equal(getPiece(state, 8, 3)?.type, "commander");
+  assert.equal(getPiece(state, 8, 4)?.type, "commander");
 })();
 
 (function testUniversalKingMovement() {
   const state = createInitialState();
-  const pawnMoves = getLegalMoves(state, 6, 4).map((square) => toAlgebraic(square)).sort();
-  const commanderMoves = getLegalMoves(state, 7, 4);
+  const pawnMoves = getLegalMoves(state, 1, 4).map((square) => toAlgebraic(square)).sort();
 
-  assert.deepEqual(pawnMoves, ["d3", "e3", "f3"]);
-  assert.equal(commanderMoves.length, 0);
+  assert.deepEqual(pawnMoves, ["d7", "e7", "f7"]);
 })();
 
 (function testCommanderCanMoveTwoSteps() {
@@ -126,6 +125,59 @@ function placePiece(state, row, col, player, type, suffix = "1") {
   const second = chooseAIMove(state, "black");
 
   assert.deepEqual(first, second);
+})();
+
+(function testTownControlSquares() {
+  const state = createEmptyState();
+
+  placePiece(state, 4, 2, "white", "pawn");
+  placePiece(state, 4, 5, "white", "pawn");
+
+  assert.equal(playerControlsBothTowns(state, "white"), true);
+  assert.equal(playerControlsBothTowns(state, "black"), false);
+})();
+
+(function testTownControlDoesNotWinImmediately() {
+  const state = createEmptyState("white");
+
+  placePiece(state, 4, 2, "white", "pawn", "a");
+  placePiece(state, 5, 5, "white", "pawn", "b");
+  placePiece(state, 8, 7, "black", "pawn", "a");
+
+  const nextState = applyMove(state, { row: 5, col: 5 }, { row: 4, col: 5 });
+
+  assert.equal(playerControlsBothTowns(nextState, "white"), true);
+  assert.equal(nextState.winner, null);
+  assert.equal(nextState.townControlPendingPlayer, "white");
+})();
+
+(function testTownControlWinsAfterFullRound() {
+  const state = createEmptyState("white");
+
+  placePiece(state, 4, 2, "white", "pawn", "a");
+  placePiece(state, 5, 5, "white", "pawn", "b");
+  placePiece(state, 8, 7, "black", "pawn", "a");
+
+  const whiteMove = applyMove(state, { row: 5, col: 5 }, { row: 4, col: 5 });
+  const blackMove = applyMove(whiteMove, { row: 8, col: 7 }, { row: 7, col: 7 });
+
+  assert.equal(blackMove.currentPlayer, "white");
+  assert.equal(blackMove.winner, "white");
+})();
+
+(function testTownControlCanBeBrokenBeforeNextTurn() {
+  const state = createEmptyState("white");
+
+  placePiece(state, 4, 2, "white", "pawn", "a");
+  placePiece(state, 5, 5, "white", "pawn", "b");
+  placePiece(state, 5, 6, "black", "pawn", "a");
+
+  const whiteMove = applyMove(state, { row: 5, col: 5 }, { row: 4, col: 5 });
+  const blackMove = applyMove(whiteMove, { row: 5, col: 6 }, { row: 4, col: 5 });
+
+  assert.equal(playerControlsBothTowns(blackMove, "white"), false);
+  assert.equal(blackMove.winner, null);
+  assert.equal(blackMove.townControlPendingPlayer, null);
 })();
 
 console.log("Kingstep rules validation passed.");

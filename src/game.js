@@ -1,7 +1,11 @@
-export const BOARD_SIZE = 8;
+export const BOARD_SIZE = 9;
 
 const BACK_RANK = ["rook", "knight", "bishop", "commander", "commander", "bishop", "knight", "rook"];
 const FILES = ["a", "b", "c", "d", "e", "f", "g", "h"];
+const TOWN_POSITIONS = [
+  { row: 4, col: 2 }, // c5
+  { row: 4, col: 5 }  // f5
+];
 const KING_STEPS = [
   { row: -1, col: -1 },
   { row: -1, col: 0 },
@@ -131,6 +135,7 @@ export function createEmptyState(currentPlayer = "white") {
     currentPlayer,
     winner: null,
     moveNumber: 1,
+    townControlPendingPlayer: null,
     lastAction: null,
     capturedPieces: {
       white: [],
@@ -143,11 +148,11 @@ export function createInitialState() {
   const state = createEmptyState("white");
   const counters = createPieceCounters();
 
-  for (let col = 0; col < BOARD_SIZE; col += 1) {
-    state.board[0][col] = makePiece("black", BACK_RANK[col], counters);
-    state.board[1][col] = makePiece("black", "pawn", counters);
-    state.board[6][col] = makePiece("white", "pawn", counters);
-    state.board[7][col] = makePiece("white", BACK_RANK[col], counters);
+  for (let col = 0; col < 8; col += 1) {
+    state.board[0][col] = makePiece("white", BACK_RANK[col], counters);
+    state.board[1][col] = makePiece("white", "pawn", counters);
+    state.board[7][col] = makePiece("black", "pawn", counters);
+    state.board[8][col] = makePiece("black", BACK_RANK[col], counters);
   }
 
   return state;
@@ -218,6 +223,16 @@ export function getRemainingPieceCounts(state) {
   return counts;
 }
 
+export function playerControlsBothTowns(state, player) {
+  for (const townPos of TOWN_POSITIONS) {
+    const piece = state.board[townPos.row][townPos.col];
+    if (!piece || piece.player !== player) {
+      return false;
+    }
+  }
+  return true;
+}
+
 export function applyMove(state, from, to) {
   if (state.winner) {
     throw new Error("The game is already finished.");
@@ -245,6 +260,7 @@ export function applyMove(state, from, to) {
     board: cloneBoard(state.board),
     moveNumber: state.moveNumber + 1,
     currentPlayer: getOpponent(state.currentPlayer),
+    townControlPendingPlayer: state.townControlPendingPlayer,
     lastAction: null,
     capturedPieces: {
       white: [...state.capturedPieces.white],
@@ -276,6 +292,19 @@ export function applyMove(state, from, to) {
   if (remaining[opponent] === 0) {
     nextState.winner = piece.player;
   }
+
+  // A town victory triggers at the start of a player's turn if they still control both towns.
+  if (
+    !nextState.winner &&
+    state.townControlPendingPlayer === nextState.currentPlayer &&
+    playerControlsBothTowns(nextState, nextState.currentPlayer)
+  ) {
+    nextState.winner = nextState.currentPlayer;
+  }
+
+  nextState.townControlPendingPlayer = playerControlsBothTowns(nextState, piece.player)
+    ? piece.player
+    : null;
 
   return nextState;
 }
