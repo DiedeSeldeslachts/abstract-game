@@ -9,6 +9,7 @@ import {
   getRemainingPieceCounts,
   toAlgebraic
 } from "../src/game.js";
+import { chooseAIMove } from "../src/ai.js";
 
 function placePiece(state, row, col, player, type, suffix = "1") {
   state.board[row][col] = {
@@ -64,6 +65,34 @@ function placePiece(state, row, col, player, type, suffix = "1") {
   assert.equal(nextState.winner, "white");
   assert.equal(counts.black, 0);
   assert.equal(nextState.capturedPieces.white.length, 1);
+})();
+
+(function testAISelectsAvailableCapture() {
+  const state = createEmptyState("black");
+
+  placePiece(state, 4, 4, "black", "rook");
+  placePiece(state, 3, 3, "white", "pawn");
+
+  const move = chooseAIMove(state, "black");
+
+  assert.ok(move);
+  assert.equal(move.from.row, 4);
+  assert.equal(move.from.col, 4);
+  assert.equal(move.to.row, 3);
+  assert.equal(move.to.col, 3);
+  assert.equal(move.capture, true);
+})();
+
+(function testAIIsDeterministicForSameState() {
+  const state = createEmptyState("black");
+
+  placePiece(state, 4, 4, "black", "rook");
+  placePiece(state, 1, 1, "white", "pawn");
+
+  const first = chooseAIMove(state, "black");
+  const second = chooseAIMove(state, "black");
+
+  assert.deepEqual(first, second);
 })();
 
 console.log("Kingstep rules validation passed.");

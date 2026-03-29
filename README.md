@@ -5,6 +5,8 @@ Each side begins with the normal chess army, but every piece moves exactly one s
 in any direction. There is no check, checkmate, castling, en passant, or promotion.
 The only way to win is to capture every opposing piece.
 
+In this implementation, you play as White and the AI controls Black.
+
 ## Run
 
 Open the root folder in a simple static server and load `index.html`.

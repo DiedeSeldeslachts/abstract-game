@@ -5,6 +5,11 @@ import {
   getRemainingPieceCounts,
   toAlgebraic
 } from "./game.js";
+import { chooseAIMove } from "./ai.js";
+
+const HUMAN_PLAYER = "white";
+const AI_PLAYER = "black";
+const AI_MOVE_DELAY_MS = 320;
 
 const PIECE_SYMBOLS = {
   white: {
@@ -39,6 +44,8 @@ const restartButton = document.querySelector("#restart-button");
 let state = createInitialState();
 let selectedSquare = null;
 let selectedMoves = [];
+let aiThinking = false;
+let aiMoveTimer = null;
 
 function titleCase(value) {
   return value.charAt(0).toUpperCase() + value.slice(1);
@@ -156,10 +163,18 @@ function renderSidebar() {
 }
 
 function renderStatus() {
-  statusTurnElement.textContent = titleCase(state.currentPlayer);
+  statusTurnElement.textContent =
+    state.currentPlayer === AI_PLAYER
+      ? `${titleCase(state.currentPlayer)} (AI)`
+      : titleCase(state.currentPlayer);
 
   if (state.winner) {
     statusTextElement.textContent = `${titleCase(state.winner)} wins by removing every opposing piece from the board.`;
+    return;
+  }
+
+  if (aiThinking) {
+    statusTextElement.textContent = `${titleCase(AI_PLAYER)} is choosing a move...`;
     return;
   }
 
@@ -183,10 +198,48 @@ function clearSelection() {
   selectedMoves = [];
 }
 
+function performAIMove() {
+  if (state.winner || state.currentPlayer !== AI_PLAYER) {
+    aiThinking = false;
+    render();
+    return;
+  }
+
+  const move = chooseAIMove(state, AI_PLAYER);
+  aiThinking = false;
+
+  if (!move) {
+    render();
+    return;
+  }
+
+  state = applyMove(state, move.from, move.to);
+  clearSelection();
+  render();
+}
+
+function scheduleAIMove() {
+  if (state.winner || state.currentPlayer !== AI_PLAYER) {
+    return;
+  }
+
+  aiThinking = true;
+  render();
+
+  if (aiMoveTimer) {
+    window.clearTimeout(aiMoveTimer);
+  }
+
+  aiMoveTimer = window.setTimeout(() => {
+    aiMoveTimer = null;
+    performAIMove();
+  }, AI_MOVE_DELAY_MS);
+}
+
 function handleSquareClick(event) {
   const square = event.target.closest("button[data-row][data-col]");
 
-  if (!square || state.winner) {
+  if (!square || state.winner || aiThinking || state.currentPlayer !== HUMAN_PLAYER) {
     return;
   }
 
@@ -198,6 +251,11 @@ function handleSquareClick(event) {
     state = applyMove(state, selectedSquare, { row, col });
     clearSelection();
     render();
+
+    if (!state.winner) {
+      scheduleAIMove();
+    }
+
     return;
   }
 
@@ -214,6 +272,12 @@ function handleSquareClick(event) {
 }
 
 function restartGame() {
+  if (aiMoveTimer) {
+    window.clearTimeout(aiMoveTimer);
+    aiMoveTimer = null;
+  }
+
+  aiThinking = false;
   state = createInitialState();
   clearSelection();
   render();
