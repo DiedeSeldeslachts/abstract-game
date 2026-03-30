@@ -3,10 +3,11 @@
 ## Overview
 
 Kingstep is a two-player abstract strategy game played on a 9x8 board.
-Each side has two commanders and fourteen pawns.
+Each side has two commanders, two sentinels, and twelve pawns.
 All pieces move one square in any direction.
 Commanders no longer move two squares; instead, each commander grants a local aura:
 any friendly pawn adjacent to that commander can hop over a friendly adjacent piece.
+Sentinels project a 1-tile shield that enemy units cannot cross.
 
 You can win by eliminating all opposing pieces or by controlling both town squares
 through one full opponent turn.
@@ -17,10 +18,12 @@ through one full opponent turn.
 - 2 town squares at c5 and f5
 - 16 white pieces:
   - 2 commanders
-  - 14 pawns
+  - 2 sentinels
+  - 12 pawns
 - 16 black pieces:
   - 2 commanders
-  - 14 pawns
+  - 2 sentinels
+  - 12 pawns
 
 ## Objective
 
@@ -34,10 +37,10 @@ Win by either:
 1. Place the board between both players.
 2. Mark c5 and f5 as town squares.
 3. White setup:
-  - Back rank (rank 9): pawn, pawn, commander, pawn, pawn, commander, pawn, pawn
+  - Back rank (rank 9): pawn, sentinel, commander, pawn, pawn, commander, sentinel, pawn
   - Front rank (rank 8): eight pawns
 4. Black setup:
-  - Back rank (rank 1): pawn, pawn, commander, pawn, pawn, commander, pawn, pawn
+  - Back rank (rank 1): pawn, sentinel, commander, pawn, pawn, commander, sentinel, pawn
   - Front rank (rank 2): eight pawns
 5. White takes the first turn.
 
@@ -69,6 +72,15 @@ Commander aura rule:
 
 Commanders themselves do not hop and move only one square.
 
+Sentinel shield rule:
+
+- Each sentinel creates a shield on the 8 surrounding squares plus its own square
+  (Chebyshev radius 1 from that sentinel).
+- Enemy units cannot enter that shield from outside it.
+- Enemy units already inside that shield cannot leave it.
+- Enemy units may still move and capture within the shield.
+- Friendly units are never restricted by their own sentinel shields.
+
 ## Special Rules and Edge Cases
 
 - There is no check or checkmate.
@@ -78,6 +90,8 @@ Commanders themselves do not hop and move only one square.
 - No piece has a forward-only rule; movement is fully adjacent in all directions.
 - A pawn can have both normal one-step moves and commander-aura hop moves in the same turn.
 - A pawn only needs to be adjacent to one friendly commander to gain hop moves.
+- Sentinel shields are checked per enemy sentinel; if a move crosses any enemy shield boundary,
+  that move is illegal.
 
 ## End of Game
 
@@ -124,6 +138,12 @@ that pawn loses all hop options and can only use normal one-step moves.
 If white occupies both c5 and f5, white creates a pending town win.
 White wins only if both towns are still occupied by white when white's next turn begins.
 
+### Example 6: Sentinel shield boundary
+
+White sentinel on e5. A black pawn on e7 cannot move to e6 because that would enter the shield.
+If a black pawn is already on e6, it cannot move to e7 because that would leave the shield,
+but it may move to d6 or capture on e5 because those squares remain inside the shield.
+
 ## Revision Notes
 
 - Removed commander two-space movement.
@@ -131,3 +151,5 @@ White wins only if both towns are still occupied by white when white's next turn
 - Clarified hop legality (adjacency requirement, blocker requirement, landing constraints).
 - Rewrote examples and edge cases to match the new commander-aura system.
 - Moved starting commanders from files d/e to files c/f.
+- Added sentinel pieces on files b/g of each back rank.
+- Added sentinel shield rule: enemy pieces cannot enter or leave radius-1 shield zones.

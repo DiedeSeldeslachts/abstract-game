@@ -29,8 +29,57 @@ function placePiece(state, row, col, player, type, suffix = "1") {
   assert.equal(state.currentPlayer, "white");
   assert.equal(getPiece(state, 0, 2)?.type, "commander");
   assert.equal(getPiece(state, 0, 5)?.type, "commander");
+  assert.equal(getPiece(state, 0, 1)?.type, "sentinel");
+  assert.equal(getPiece(state, 0, 6)?.type, "sentinel");
   assert.equal(getPiece(state, 8, 2)?.type, "commander");
   assert.equal(getPiece(state, 8, 5)?.type, "commander");
+  assert.equal(getPiece(state, 8, 1)?.type, "sentinel");
+  assert.equal(getPiece(state, 8, 6)?.type, "sentinel");
+})();
+
+(function testEnemyCannotEnterSentinelShield() {
+  const state = createEmptyState("black");
+
+  placePiece(state, 4, 4, "white", "sentinel");
+  placePiece(state, 2, 4, "black", "pawn");
+
+  const moves = getLegalMoves(state, 2, 4);
+
+  assert.ok(!moves.some((move) => move.row === 3 && move.col === 4));
+})();
+
+(function testEnemyCannotLeaveSentinelShield() {
+  const state = createEmptyState("black");
+
+  placePiece(state, 4, 4, "white", "sentinel");
+  placePiece(state, 3, 4, "black", "pawn");
+
+  const moves = getLegalMoves(state, 3, 4);
+
+  assert.ok(!moves.some((move) => move.row === 2 && move.col === 4));
+  assert.ok(moves.some((move) => move.row === 4 && move.col === 4 && move.capture));
+})();
+
+(function testEnemyCanMoveWithinSentinelShield() {
+  const state = createEmptyState("black");
+
+  placePiece(state, 4, 4, "white", "sentinel");
+  placePiece(state, 3, 4, "black", "pawn");
+
+  const moves = getLegalMoves(state, 3, 4);
+
+  assert.ok(moves.some((move) => move.row === 3 && move.col === 3));
+})();
+
+(function testFriendlyPiecesIgnoreOwnSentinelShield() {
+  const state = createEmptyState("white");
+
+  placePiece(state, 4, 4, "white", "sentinel");
+  placePiece(state, 2, 4, "white", "pawn");
+
+  const moves = getLegalMoves(state, 2, 4);
+
+  assert.ok(moves.some((move) => move.row === 3 && move.col === 4));
 })();
 
 (function testUniversalAdjacentMovement() {

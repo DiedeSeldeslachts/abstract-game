@@ -1,13 +1,13 @@
 export const BOARD_ROWS = 9;
 export const BOARD_COLS = 8;
 
-const BACK_RANK = ["pawn", "pawn", "commander", "pawn", "pawn", "commander", "pawn", "pawn"];
+const BACK_RANK = ["pawn", "sentinel", "commander", "pawn", "pawn", "commander", "sentinel", "pawn"];
 const FILES = ["a", "b", "c", "d", "e", "f", "g", "h"];
 export const TOWN_POSITIONS = [
   { row: 4, col: 2 }, // c5
   { row: 4, col: 5 }  // f5
 ];
-const UNIT_TYPES = ["commander", "pawn"];
+const UNIT_TYPES = ["commander", "pawn", "sentinel"];
 const ADJACENT_STEPS = [
   { row: -1, col: -1 },
   { row: -1, col: 0 },
@@ -52,6 +52,31 @@ function cloneBoard(board) {
   return board.map((row) => row.slice());
 }
 
+function isInsideSentinelShield(row, col, sentinelRow, sentinelCol) {
+  return Math.max(Math.abs(row - sentinelRow), Math.abs(col - sentinelCol)) <= 1;
+}
+
+function isBlockedByEnemySentinelShield(state, fromRow, fromCol, toRow, toCol, player) {
+  for (let row = 0; row < BOARD_ROWS; row += 1) {
+    for (let col = 0; col < BOARD_COLS; col += 1) {
+      const piece = state.board[row][col];
+
+      if (!piece || piece.player === player || piece.type !== "sentinel") {
+        continue;
+      }
+
+      const fromInside = isInsideSentinelShield(fromRow, fromCol, row, col);
+      const toInside = isInsideSentinelShield(toRow, toCol, row, col);
+
+      if (fromInside !== toInside) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 function getSingleStepMovesForPlayer(state, row, col, player) {
   const moves = [];
 
@@ -66,6 +91,10 @@ function getSingleStepMovesForPlayer(state, row, col, player) {
     const target = state.board[nextRow][nextCol];
 
     if (target && target.player === player) {
+      continue;
+    }
+
+    if (isBlockedByEnemySentinelShield(state, row, col, nextRow, nextCol, player)) {
       continue;
     }
 
@@ -132,6 +161,10 @@ function getCommanderAuraHopMovesForPawn(state, row, col, player) {
       continue;
     }
 
+    if (isBlockedByEnemySentinelShield(state, row, col, landingRow, landingCol, player)) {
+      continue;
+    }
+
     moves.push({
       row: landingRow,
       col: landingCol,
@@ -150,6 +183,10 @@ function getLegalMovesForPlayer(state, row, col, player) {
   }
 
   if (piece.type === "commander") {
+    return getSingleStepMovesForPlayer(state, row, col, player);
+  }
+
+  if (piece.type !== "pawn") {
     return getSingleStepMovesForPlayer(state, row, col, player);
   }
 

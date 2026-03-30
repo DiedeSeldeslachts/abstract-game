@@ -8,7 +8,8 @@ import {
 
 const CAPTURE_VALUES = {
   commander: 11,
-  pawn: 4
+  pawn: 4,
+  sentinel: 7
 };
 
 function getOpponent(player) {

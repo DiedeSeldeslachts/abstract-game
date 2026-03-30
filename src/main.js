@@ -18,11 +18,13 @@ const AI_MOVE_DELAY_MS = 320;
 const PIECE_SYMBOLS = {
   white: {
     commander: "♔",
-    pawn: "♙"
+    pawn: "♙",
+    sentinel: "♖"
   },
   black: {
     commander: "♚",
-    pawn: "♟"
+    pawn: "♟",
+    sentinel: "♜"
   }
 };
 
@@ -51,8 +53,46 @@ function formatPieceName(piece) {
   return `${titleCase(piece.player)} ${piece.type}`;
 }
 
-function getSquareClasses(row, col) {
+function isInsideSentinelShield(row, col, sentinelRow, sentinelCol) {
+  return Math.max(Math.abs(row - sentinelRow), Math.abs(col - sentinelCol)) <= 1;
+}
+
+function getSentinelShieldSquares(gameState) {
+  const squares = new Set();
+
+  for (let row = 0; row < BOARD_ROWS; row += 1) {
+    for (let col = 0; col < BOARD_COLS; col += 1) {
+      const piece = gameState.board[row][col];
+
+      if (!piece || piece.type !== "sentinel") {
+        continue;
+      }
+
+      for (let shieldRow = row - 1; shieldRow <= row + 1; shieldRow += 1) {
+        for (let shieldCol = col - 1; shieldCol <= col + 1; shieldCol += 1) {
+          if (
+            shieldRow >= 0 &&
+            shieldRow < BOARD_ROWS &&
+            shieldCol >= 0 &&
+            shieldCol < BOARD_COLS &&
+            isInsideSentinelShield(shieldRow, shieldCol, row, col)
+          ) {
+            squares.add(`${shieldRow},${shieldCol}`);
+          }
+        }
+      }
+    }
+  }
+
+  return squares;
+}
+
+function getSquareClasses(row, col, sentinelShieldSquares) {
   const classes = ["square", (row + col) % 2 === 0 ? "light" : "dark"];
+
+  if (sentinelShieldSquares.has(`${row},${col}`)) {
+    classes.push("is-sentinel-shield");
+  }
 
   if (selectedSquare && selectedSquare.row === row && selectedSquare.col === col) {
     classes.push("is-selected");
@@ -101,6 +141,7 @@ function createCoordinateLabels(row, col) {
 
 function renderBoard() {
   boardElement.innerHTML = "";
+  const sentinelShieldSquares = getSentinelShieldSquares(state);
 
   for (let row = 0; row < BOARD_ROWS; row += 1) {
     for (let col = 0; col < BOARD_COLS; col += 1) {
@@ -108,7 +149,7 @@ function renderBoard() {
       const square = document.createElement("button");
 
       square.type = "button";
-      square.className = getSquareClasses(row, col);
+      square.className = getSquareClasses(row, col, sentinelShieldSquares);
       square.dataset.row = String(row);
       square.dataset.col = String(col);
       square.setAttribute("role", "gridcell");
@@ -194,7 +235,7 @@ function renderStatus() {
     return;
   }
 
-  statusTextElement.textContent = `${titleCase(state.currentPlayer)} to move. Most pieces move one square; pawns adjacent to a commander can hop over friendly pieces. Hold both towns for one full round to win!`;
+  statusTextElement.textContent = `${titleCase(state.currentPlayer)} to move. Most pieces move one square; pawns adjacent to a commander can hop over friendly pieces. Sentinels project a 1-tile shield enemies cannot enter or leave. Hold both towns for one full round to win!`;
 }
 
 function render() {
