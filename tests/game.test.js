@@ -244,6 +244,39 @@ function placePiece(state, row, col, player, type, suffix = "1") {
   assert.deepEqual(first, second);
 })();
 
+(function testAIPrefersCapturingOnTownSquare() {
+  const state = createEmptyState("black");
+
+  placePiece(state, 5, 2, "black", "pawn");
+  placePiece(state, 4, 2, "white", "pawn", "town-target");
+  placePiece(state, 4, 3, "white", "pawn", "regular-target");
+  placePiece(state, 0, 0, "white", "pawn", "extra");
+
+  const move = chooseAIMove(state, "black");
+
+  assert.ok(move);
+  assert.equal(move.from.row, 5);
+  assert.equal(move.from.col, 2);
+  assert.equal(move.to.row, 4);
+  assert.equal(move.to.col, 2);
+  assert.equal(move.capture, true);
+})();
+
+(function testAIPrefersForwardProgressWithoutCaptures() {
+  const state = createEmptyState("black");
+
+  placePiece(state, 6, 3, "black", "pawn");
+
+  const move = chooseAIMove(state, "black");
+
+  assert.ok(move);
+  assert.equal(move.from.row, 6);
+  assert.equal(move.from.col, 3);
+  assert.equal(move.to.row, 5);
+  assert.equal(move.to.col, 2);
+  assert.equal(move.capture, false);
+})();
+
 (function testTownControlSquares() {
   const state = createEmptyState();
 

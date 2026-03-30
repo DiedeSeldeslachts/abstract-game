@@ -7,13 +7,20 @@ import {
 } from "./game.js";
 
 const CAPTURE_VALUES = {
-  commander: 11,
+  commander: 12,
   pawn: 4,
-  sentinel: 7,
-  teacher: 9
+  sentinel: 8,
+  teacher: 10
 };
 
 const TRANSFORM_ACTION_TAX = 6;
+const CAPTURE_BASE_SCORE = 90;
+const FORWARD_PROGRESS_WEIGHT = 18;
+const TOWN_CONTROL_THREAT_SCORE = 1800;
+const TOWN_OCCUPATION_SCORE = 260;
+const OPPONENT_TOWN_OCCUPATION_PENALTY = 280;
+const TOWN_MOVE_BONUS = 90;
+const TOWN_CAPTURE_BONUS = 220;
 
 function getOpponent(player) {
   return player === "white" ? "black" : "white";
@@ -54,11 +61,24 @@ function countOpponentCapturesOnSquare(state, opponent, targetSquare) {
   ).length;
 }
 
+function isTownSquare(square) {
+  return TOWN_POSITIONS.some((position) => position.row === square.row && position.col === square.col);
+}
+
+function getForwardProgress(move, player) {
+  if (move.transform) {
+    return 0;
+  }
+
+  const rowDelta = move.to.row - move.from.row;
+  return player === "white" ? rowDelta : -rowDelta;
+}
+
 function scoreMove(state, move, player) {
   const opponent = getOpponent(player);
   const targetPiece = getPiece(state, move.to.row, move.to.col);
   const captured = targetPiece && targetPiece.player !== player ? targetPiece : null;
-  const captureScore = captured ? 40 + CAPTURE_VALUES[captured.type] : 0;
+  const captureScore = captured ? CAPTURE_BASE_SCORE + CAPTURE_VALUES[captured.type] * 14 : 0;
   const transformedFromType =
     move.transform && targetPiece && targetPiece.player === player ? targetPiece.type : null;
   const transformedToType = move.transform ? move.transformTo : null;
@@ -76,6 +96,9 @@ function scoreMove(state, move, player) {
     Number.isFinite(distanceBefore) && Number.isFinite(distanceAfter)
       ? (distanceBefore - distanceAfter) * 2
       : 0;
+  const forwardScore = getForwardProgress(move, player) * FORWARD_PROGRESS_WEIGHT;
+  const townMoveScore = isTownSquare(move.to) ? TOWN_MOVE_BONUS : 0;
+  const townCaptureScore = captured && isTownSquare(move.to) ? TOWN_CAPTURE_BONUS : 0;
   const exposurePenalty = countOpponentCapturesOnSquare(nextState, opponent, postActionSquare) * 10;
   const winScore = nextState.winner === player ? 10_000 : 0;
 
@@ -85,7 +108,7 @@ function scoreMove(state, move, player) {
   
   let townScore = 0;
   if (playerOwnsTowns) {
-    townScore = 1200; // Strong pressure: creates/maintains a pending town win threat
+    townScore = TOWN_CONTROL_THREAT_SCORE;
   } else {
     // Score individual town occupation
     let townsOccupied = 0;
@@ -95,7 +118,7 @@ function scoreMove(state, move, player) {
         townsOccupied += 1;
       }
     }
-    townScore = townsOccupied * 150;
+    townScore = townsOccupied * TOWN_OCCUPATION_SCORE;
   }
 
   // Penalty if opponent gets closer to owning both towns
@@ -108,10 +131,21 @@ function scoreMove(state, move, player) {
         opponentTownsOccupied += 1;
       }
     }
-    opponentTownPenalty = opponentTownsOccupied * 200;
+    opponentTownPenalty = opponentTownsOccupied * OPPONENT_TOWN_OCCUPATION_PENALTY;
   }
 
-  return winScore + captureScore + transformScore + approachScore - exposurePenalty + townScore - opponentTownPenalty;
+  return (
+    winScore +
+    captureScore +
+    transformScore +
+    approachScore +
+    forwardScore -
+    exposurePenalty +
+    townScore -
+    opponentTownPenalty +
+    townMoveScore +
+    townCaptureScore
+  );
 }
 
 function compareMoveOrder(a, b) {
