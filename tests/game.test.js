@@ -31,10 +31,53 @@ function placePiece(state, row, col, player, type, suffix = "1") {
   assert.equal(getPiece(state, 0, 5)?.type, "commander");
   assert.equal(getPiece(state, 0, 1)?.type, "sentinel");
   assert.equal(getPiece(state, 0, 6)?.type, "sentinel");
+  assert.equal(getPiece(state, 0, 3)?.type, "teacher");
+  assert.equal(getPiece(state, 0, 4)?.type, "pawn");
   assert.equal(getPiece(state, 8, 2)?.type, "commander");
   assert.equal(getPiece(state, 8, 5)?.type, "commander");
   assert.equal(getPiece(state, 8, 1)?.type, "sentinel");
   assert.equal(getPiece(state, 8, 6)?.type, "sentinel");
+  assert.equal(getPiece(state, 8, 4)?.type, "teacher");
+  assert.equal(getPiece(state, 8, 3)?.type, "pawn");
+})();
+
+(function testTeacherCanTargetFriendlyNonTeacherPiecesForTransform() {
+  const state = createEmptyState("white");
+
+  placePiece(state, 4, 4, "white", "teacher");
+  placePiece(state, 4, 5, "white", "pawn");
+  placePiece(state, 3, 3, "white", "sentinel");
+  placePiece(state, 5, 5, "white", "commander");
+  placePiece(state, 1, 1, "white", "pawn", "far");
+
+  const moves = getLegalMoves(state, 4, 4);
+  const transformOnPawn = moves.find((move) => move.row === 4 && move.col === 5 && move.transform);
+
+  assert.ok(transformOnPawn);
+  assert.deepEqual(transformOnPawn.transformOptions.sort(), ["commander", "sentinel"]);
+  assert.ok(!moves.some((move) => move.row === 4 && move.col === 4 && move.transform));
+  assert.ok(!moves.some((move) => move.row === 1 && move.col === 1 && move.transform));
+})();
+
+(function testTeacherTransformChangesTypeWithoutMovingTeacher() {
+  const state = createEmptyState("white");
+
+  placePiece(state, 4, 4, "white", "teacher");
+  placePiece(state, 4, 5, "white", "pawn");
+  placePiece(state, 8, 7, "black", "pawn");
+
+  const nextState = applyMove(
+    state,
+    { row: 4, col: 4 },
+    { row: 4, col: 5 },
+    { transformTo: "commander" }
+  );
+
+  assert.equal(getPiece(nextState, 4, 4)?.type, "teacher");
+  assert.equal(getPiece(nextState, 4, 5)?.type, "commander");
+  assert.equal(nextState.lastAction?.kind, "transform");
+  assert.equal(nextState.lastAction?.transformedFrom, "pawn");
+  assert.equal(nextState.lastAction?.transformedTo, "commander");
 })();
 
 (function testEnemyCannotEnterSentinelShield() {

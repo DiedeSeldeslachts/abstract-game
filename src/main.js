@@ -19,12 +19,14 @@ const PIECE_SYMBOLS = {
   white: {
     commander: "♔",
     pawn: "♙",
-    sentinel: "♖"
+    sentinel: "♖",
+    teacher: "♗"
   },
   black: {
     commander: "♚",
     pawn: "♟",
-    sentinel: "♜"
+    sentinel: "♜",
+    teacher: "♝"
   }
 };
 
@@ -38,12 +40,19 @@ const blackRemainingElement = document.querySelector("#black-remaining");
 const whiteCapturesElement = document.querySelector("#white-captures");
 const blackCapturesElement = document.querySelector("#black-captures");
 const restartButton = document.querySelector("#restart-button");
+const transformOverlayElement = document.querySelector("#transform-overlay");
+const transformTitleElement = document.querySelector("#transform-overlay-title");
+const transformPromptElement = document.querySelector("#transform-overlay-prompt");
+const transformOptionsElement = document.querySelector("#transform-options");
+const transformCancelButton = document.querySelector("#transform-cancel");
 
 let state = createInitialState();
 let selectedSquare = null;
 let selectedMoves = [];
 let aiThinking = false;
 let aiMoveTimer = null;
+let transformChoiceResolver = null;
+let transformChoicePending = false;
 
 function titleCase(value) {
   return value.charAt(0).toUpperCase() + value.slice(1);
@@ -207,6 +216,11 @@ function renderSidebar() {
     return;
   }
 
+  if (state.lastAction.kind === "transform") {
+    lastActionTextElement.textContent = `${pieceName} transformed ${titleCase(state.lastAction.player)} ${state.lastAction.transformedFrom} on ${to} into ${state.lastAction.transformedTo}.`;
+    return;
+  }
+
   lastActionTextElement.textContent = `${pieceName} moved from ${from} to ${to}.`;
 }
 
@@ -235,7 +249,7 @@ function renderStatus() {
     return;
   }
 
-  statusTextElement.textContent = `${titleCase(state.currentPlayer)} to move. Most pieces move one square; pawns adjacent to a commander can hop over friendly pieces. Sentinels project a 1-tile shield enemies cannot enter or leave. Hold both towns for one full round to win!`;
+  statusTextElement.textContent = `${titleCase(state.currentPlayer)} to move. Most pieces move one square; pawns adjacent to a commander can hop over friendly pieces. Teachers can transform friendly units into any non-Teacher piece. Sentinels project a 1-tile shield enemies cannot enter or leave. Hold both towns for one full round to win!`;
 }
 
 function render() {
@@ -247,6 +261,63 @@ function render() {
 function clearSelection() {
   selectedSquare = null;
   selectedMoves = [];
+}
+
+function closeTransformOverlay(result = null) {
+  if (!transformChoicePending || !transformChoiceResolver) {
+    return;
+  }
+
+  transformChoicePending = false;
+  transformOverlayElement.classList.remove("is-open");
+  transformOverlayElement.setAttribute("aria-hidden", "true");
+  transformOptionsElement.innerHTML = "";
+
+  const resolver = transformChoiceResolver;
+  transformChoiceResolver = null;
+  resolver(result);
+}
+
+function openTransformOverlay(move, targetPiece) {
+  const options = move.transformOptions ?? [];
+
+  if (options.length === 0) {
+    return Promise.resolve(null);
+  }
+
+  return new Promise((resolve) => {
+    transformChoicePending = true;
+    transformChoiceResolver = resolve;
+
+    transformOverlayElement.classList.add("is-open");
+    transformOverlayElement.setAttribute("aria-hidden", "false");
+    transformOptionsElement.innerHTML = "";
+
+    if (targetPiece) {
+      transformTitleElement.textContent = `Transform ${titleCase(targetPiece.player)} ${targetPiece.type}`;
+      transformPromptElement.textContent = "Choose the new piece type.";
+    } else {
+      transformTitleElement.textContent = "Choose transform target";
+      transformPromptElement.textContent = "Choose the new piece type.";
+    }
+
+    for (const option of options) {
+      const optionButton = document.createElement("button");
+      const glyph = PIECE_SYMBOLS[state.currentPlayer][option];
+
+      optionButton.type = "button";
+      optionButton.className = "transform-option";
+      optionButton.setAttribute("aria-label", `Transform into ${option}`);
+      optionButton.innerHTML = `<span class="transform-glyph">${glyph}</span><span class="transform-label">${titleCase(option)}</span>`;
+      optionButton.addEventListener("click", () => closeTransformOverlay(option));
+      transformOptionsElement.append(optionButton);
+    }
+
+    const firstOption = transformOptionsElement.querySelector(".transform-option");
+    if (firstOption) {
+      firstOption.focus();
+    }
+  });
 }
 
 function performAIMove() {
@@ -264,9 +335,13 @@ function performAIMove() {
     return;
   }
 
-  state = applyMove(state, move.from, move.to);
+  state = applyMove(state, move.from, move.to, { transformTo: move.transformTo });
   clearSelection();
   render();
+}
+
+function chooseTransformType(move, targetPiece) {
+  return openTransformOverlay(move, targetPiece);
 }
 
 function scheduleAIMove() {
@@ -287,10 +362,10 @@ function scheduleAIMove() {
   }, AI_MOVE_DELAY_MS);
 }
 
-function handleSquareClick(event) {
+async function handleSquareClick(event) {
   const square = event.target.closest("button[data-row][data-col]");
 
-  if (!square || state.winner || aiThinking || state.currentPlayer !== HUMAN_PLAYER) {
+  if (!square || state.winner || aiThinking || transformChoicePending || state.currentPlayer !== HUMAN_PLAYER) {
     return;
   }
 
@@ -299,7 +374,19 @@ function handleSquareClick(event) {
   const targetMove = selectedMoves.find((move) => move.row === row && move.col === col);
 
   if (selectedSquare && targetMove) {
-    state = applyMove(state, selectedSquare, { row, col });
+    let transformTo = null;
+
+    if (targetMove.transform) {
+      const targetPiece = state.board[row][col];
+      transformTo = await chooseTransformType(targetMove, targetPiece);
+
+      if (!transformTo) {
+        render();
+        return;
+      }
+    }
+
+    state = applyMove(state, selectedSquare, { row, col }, { transformTo });
     clearSelection();
     render();
 
@@ -329,10 +416,28 @@ function restartGame() {
   }
 
   aiThinking = false;
+  if (transformChoicePending) {
+    closeTransformOverlay(null);
+  }
   state = createInitialState();
   clearSelection();
   render();
 }
+
+transformCancelButton.addEventListener("click", () => closeTransformOverlay(null));
+
+transformOverlayElement.addEventListener("click", (event) => {
+  if (event.target === transformOverlayElement) {
+    closeTransformOverlay(null);
+  }
+});
+
+window.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && transformChoicePending) {
+    event.preventDefault();
+    closeTransformOverlay(null);
+  }
+});
 
 boardElement.addEventListener("click", handleSquareClick);
 restartButton.addEventListener("click", restartGame);

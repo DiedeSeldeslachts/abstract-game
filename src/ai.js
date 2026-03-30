@@ -9,7 +9,14 @@ import {
 const CAPTURE_VALUES = {
   commander: 11,
   pawn: 4,
-  sentinel: 7
+  sentinel: 7,
+  teacher: 9
+};
+
+const TRANSFORM_VALUES = {
+  commander: 13,
+  sentinel: 8,
+  pawn: 4
 };
 
 function getOpponent(player) {
@@ -53,17 +60,20 @@ function countOpponentCapturesOnSquare(state, opponent, targetSquare) {
 
 function scoreMove(state, move, player) {
   const opponent = getOpponent(player);
-  const captured = getPiece(state, move.to.row, move.to.col);
+  const targetPiece = getPiece(state, move.to.row, move.to.col);
+  const captured = targetPiece && targetPiece.player !== player ? targetPiece : null;
   const captureScore = captured ? 40 + CAPTURE_VALUES[captured.type] : 0;
+  const transformScore = move.transform ? 24 + TRANSFORM_VALUES[move.transformTo] : 0;
+  const postActionSquare = move.transform ? move.from : move.to;
 
   const distanceBefore = getNearestEnemyDistance(state, move.from, player);
-  const nextState = applyMove(state, move.from, move.to);
-  const distanceAfter = getNearestEnemyDistance(nextState, move.to, player);
+  const nextState = applyMove(state, move.from, move.to, { transformTo: move.transformTo });
+  const distanceAfter = getNearestEnemyDistance(nextState, postActionSquare, player);
   const approachScore =
     Number.isFinite(distanceBefore) && Number.isFinite(distanceAfter)
       ? (distanceBefore - distanceAfter) * 2
       : 0;
-  const exposurePenalty = countOpponentCapturesOnSquare(nextState, opponent, move.to) * 10;
+  const exposurePenalty = countOpponentCapturesOnSquare(nextState, opponent, postActionSquare) * 10;
   const winScore = nextState.winner === player ? 10_000 : 0;
 
   // Town control scoring
@@ -98,7 +108,7 @@ function scoreMove(state, move, player) {
     opponentTownPenalty = opponentTownsOccupied * 200;
   }
 
-  return winScore + captureScore + approachScore - exposurePenalty + townScore - opponentTownPenalty;
+  return winScore + captureScore + transformScore + approachScore - exposurePenalty + townScore - opponentTownPenalty;
 }
 
 function compareMoveOrder(a, b) {
@@ -150,6 +160,8 @@ export function chooseAIMove(state, player = state.currentPlayer) {
     from: { ...bestMove.from },
     to: { ...bestMove.to },
     capture: bestMove.capture,
-    piece: bestMove.piece
+    piece: bestMove.piece,
+    transform: Boolean(bestMove.transform),
+    transformTo: bestMove.transformTo ?? null
   };
 }

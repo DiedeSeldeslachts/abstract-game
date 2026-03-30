@@ -1,13 +1,15 @@
 export const BOARD_ROWS = 9;
 export const BOARD_COLS = 8;
 
-const BACK_RANK = ["pawn", "sentinel", "commander", "pawn", "pawn", "commander", "sentinel", "pawn"];
+const WHITE_BACK_RANK = ["pawn", "sentinel", "commander", "teacher", "pawn", "commander", "sentinel", "pawn"];
+const BLACK_BACK_RANK = ["pawn", "sentinel", "commander", "pawn", "teacher", "commander", "sentinel", "pawn"];
 const FILES = ["a", "b", "c", "d", "e", "f", "g", "h"];
 export const TOWN_POSITIONS = [
   { row: 4, col: 2 }, // c5
   { row: 4, col: 5 }  // f5
 ];
-const UNIT_TYPES = ["commander", "pawn", "sentinel"];
+const UNIT_TYPES = ["commander", "pawn", "sentinel", "teacher"];
+export const TEACHER_TRANSFORM_TARGET_TYPES = ["commander", "pawn", "sentinel"];
 const ADJACENT_STEPS = [
   { row: -1, col: -1 },
   { row: -1, col: 0 },
@@ -175,6 +177,41 @@ function getCommanderAuraHopMovesForPawn(state, row, col, player) {
   return moves;
 }
 
+function getTeacherTransformTargets(state, row, col, player) {
+  const targets = [];
+
+  for (const step of ADJACENT_STEPS) {
+    const targetRow = row + step.row;
+    const targetCol = col + step.col;
+
+    if (!isInsideBoard(targetRow, targetCol)) {
+      continue;
+    }
+
+    const piece = state.board[targetRow][targetCol];
+
+    if (!piece || piece.player !== player || piece.type === "teacher") {
+      continue;
+    }
+
+    const transformOptions = TEACHER_TRANSFORM_TARGET_TYPES.filter((type) => type !== piece.type);
+
+    if (transformOptions.length === 0) {
+      continue;
+    }
+
+    targets.push({
+      row: targetRow,
+      col: targetCol,
+      capture: false,
+      transform: true,
+      transformOptions
+    });
+  }
+
+  return targets;
+}
+
 function getLegalMovesForPlayer(state, row, col, player) {
   const piece = getPiece(state, row, col);
 
@@ -184,6 +221,10 @@ function getLegalMovesForPlayer(state, row, col, player) {
 
   if (piece.type === "commander") {
     return getSingleStepMovesForPlayer(state, row, col, player);
+  }
+
+  if (piece.type === "teacher") {
+    return [...getSingleStepMovesForPlayer(state, row, col, player), ...getTeacherTransformTargets(state, row, col, player)];
   }
 
   if (piece.type !== "pawn") {
@@ -223,10 +264,10 @@ export function createInitialState() {
   const counters = createPieceCounters();
 
   for (let col = 0; col < BOARD_COLS; col += 1) {
-    state.board[0][col] = makePiece("white", BACK_RANK[col], counters);
+    state.board[0][col] = makePiece("white", WHITE_BACK_RANK[col], counters);
     state.board[1][col] = makePiece("white", "pawn", counters);
     state.board[7][col] = makePiece("black", "pawn", counters);
-    state.board[8][col] = makePiece("black", BACK_RANK[col], counters);
+    state.board[8][col] = makePiece("black", BLACK_BACK_RANK[col], counters);
   }
 
   return state;
@@ -270,6 +311,21 @@ export function getAllLegalMoves(state, player = state.currentPlayer) {
       const moves = getLegalMovesForPlayer(state, row, col, player);
 
       for (const move of moves) {
+        if (move.transform && Array.isArray(move.transformOptions)) {
+          for (const transformTo of move.transformOptions) {
+            allMoves.push({
+              from: { row, col },
+              to: { row: move.row, col: move.col },
+              capture: false,
+              piece,
+              transform: true,
+              transformTo
+            });
+          }
+
+          continue;
+        }
+
         allMoves.push({
           from: { row, col },
           to: { row: move.row, col: move.col },
@@ -311,7 +367,7 @@ export function isTownSquare(row, col) {
   return TOWN_POSITIONS.some((town) => town.row === row && town.col === col);
 }
 
-export function applyMove(state, from, to) {
+export function applyMove(state, from, to, options = {}) {
   if (state.winner) {
     throw new Error("The game is already finished.");
   }
@@ -346,23 +402,54 @@ export function applyMove(state, from, to) {
     }
   };
 
-  const capturedPiece = nextState.board[to.row][to.col];
+  let capturedPiece = null;
+  const transformTo = options.transformTo ?? null;
 
-  nextState.board[from.row][from.col] = null;
-  nextState.board[to.row][to.col] = piece;
+  if (targetMove.transform) {
+    if (!transformTo || !targetMove.transformOptions?.includes(transformTo)) {
+      throw new Error("Choose a valid piece type for Teacher transformation.");
+    }
 
-  if (capturedPiece) {
-    nextState.capturedPieces[piece.player].push(capturedPiece);
+    const targetPiece = nextState.board[to.row][to.col];
+
+    if (!targetPiece || targetPiece.player !== piece.player || targetPiece.type === "teacher") {
+      throw new Error("Teacher can only transform friendly non-Teacher pieces.");
+    }
+
+    nextState.board[to.row][to.col] = {
+      ...targetPiece,
+      type: transformTo
+    };
+
+    nextState.lastAction = {
+      kind: "transform",
+      player: piece.player,
+      piece,
+      from: { ...from },
+      to: { ...to },
+      capturedPiece: null,
+      transformedFrom: targetPiece.type,
+      transformedTo: transformTo
+    };
+  } else {
+    capturedPiece = nextState.board[to.row][to.col];
+
+    nextState.board[from.row][from.col] = null;
+    nextState.board[to.row][to.col] = piece;
+
+    if (capturedPiece) {
+      nextState.capturedPieces[piece.player].push(capturedPiece);
+    }
+
+    nextState.lastAction = {
+      kind: capturedPiece ? "capture" : "move",
+      player: piece.player,
+      piece,
+      from: { ...from },
+      to: { ...to },
+      capturedPiece
+    };
   }
-
-  nextState.lastAction = {
-    kind: capturedPiece ? "capture" : "move",
-    player: piece.player,
-    piece,
-    from: { ...from },
-    to: { ...to },
-    capturedPiece
-  };
 
   const remaining = getRemainingPieceCounts(nextState);
   const opponent = getOpponent(piece.player);

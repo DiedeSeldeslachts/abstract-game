@@ -3,10 +3,11 @@
 ## Overview
 
 Kingstep is a two-player abstract strategy game played on a 9x8 board.
-Each side has two commanders, two sentinels, and twelve pawns.
+Each side has two commanders, two sentinels, one teacher, and eleven pawns.
 All pieces move one square in any direction.
 Commanders no longer move two squares; instead, each commander grants a local aura:
 any friendly pawn adjacent to that commander can hop over a friendly adjacent piece.
+Teachers can transform friendly pieces into other non-Teacher piece types.
 Sentinels project a 1-tile shield that enemy units cannot cross.
 
 You can win by eliminating all opposing pieces or by controlling both town squares
@@ -19,11 +20,13 @@ through one full opponent turn.
 - 16 white pieces:
   - 2 commanders
   - 2 sentinels
-  - 12 pawns
+  - 1 teacher
+  - 11 pawns
 - 16 black pieces:
   - 2 commanders
   - 2 sentinels
-  - 12 pawns
+  - 1 teacher
+  - 11 pawns
 
 ## Objective
 
@@ -37,10 +40,10 @@ Win by either:
 1. Place the board between both players.
 2. Mark c5 and f5 as town squares.
 3. White setup:
-  - Back rank (rank 9): pawn, sentinel, commander, pawn, pawn, commander, sentinel, pawn
+  - Back rank (rank 9): pawn, sentinel, commander, teacher, pawn, commander, sentinel, pawn
   - Front rank (rank 8): eight pawns
 4. Black setup:
-  - Back rank (rank 1): pawn, sentinel, commander, pawn, pawn, commander, sentinel, pawn
+  - Back rank (rank 1): pawn, sentinel, commander, pawn, teacher, commander, sentinel, pawn
   - Front rank (rank 2): eight pawns
 5. White takes the first turn.
 
@@ -61,6 +64,16 @@ There are no bonus actions.
 - You may move into empty squares or capture by moving onto an enemy square.
 - You may not move off-board.
 - You may not move onto a square occupied by a friendly piece.
+
+Teacher transformation rule:
+
+- A teacher may use its action to transform one friendly non-Teacher piece instead of moving.
+- The transformed piece must be within range 1 of the teacher (an adjacent square, including diagonals).
+- The chosen friendly piece keeps its square and is changed into exactly one of:
+  commander, pawn, or sentinel.
+- The chosen type cannot be teacher.
+- The transformed piece cannot stay the same type it already was.
+- The teacher does not move when performing a transformation.
 
 Commander aura rule:
 
@@ -90,6 +103,7 @@ Sentinel shield rule:
 - No piece has a forward-only rule; movement is fully adjacent in all directions.
 - A pawn can have both normal one-step moves and commander-aura hop moves in the same turn.
 - A pawn only needs to be adjacent to one friendly commander to gain hop moves.
+- A teacher can only transform adjacent friendly non-Teacher pieces (range 1).
 - Sentinel shields are checked per enemy sentinel; if a move crosses any enemy shield boundary,
   that move is illegal.
 
@@ -144,6 +158,11 @@ White sentinel on e5. A black pawn on e7 cannot move to e6 because that would en
 If a black pawn is already on e6, it cannot move to e7 because that would leave the shield,
 but it may move to d6 or capture on e5 because those squares remain inside the shield.
 
+### Example 7: Teacher transformation
+
+White teacher on d9 chooses the adjacent friendly pawn on e8 and transforms it into a sentinel.
+The teacher remains on d9, the chosen pawn's square stays e8, and the turn ends normally.
+
 ## Revision Notes
 
 - Removed commander two-space movement.
@@ -153,3 +172,6 @@ but it may move to d6 or capture on e5 because those squares remain inside the s
 - Moved starting commanders from files d/e to files c/f.
 - Added sentinel pieces on files b/g of each back rank.
 - Added sentinel shield rule: enemy pieces cannot enter or leave radius-1 shield zones.
+- Added teacher piece: starts on d-file for White and e-file for Black.
+- Added teacher transformation action for friendly non-Teacher pieces.
+- Changed teacher transformation range to 1 (adjacent squares only).

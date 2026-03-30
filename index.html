@@ -80,6 +80,23 @@
       </main>
     </div>
 
+    <div
+      id="transform-overlay"
+      class="transform-overlay"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="transform-overlay-title"
+      aria-describedby="transform-overlay-prompt"
+      aria-hidden="true"
+    >
+      <div class="transform-dialog">
+        <h2 id="transform-overlay-title">Choose transform target</h2>
+        <p id="transform-overlay-prompt" class="support-text">Choose the new piece type.</p>
+        <div id="transform-options" class="transform-options" role="group" aria-label="Teacher transform choices"></div>
+        <button id="transform-cancel" class="secondary-button" type="button">Cancel</button>
+      </div>
+    </div>
+
     <script type="module" src="./src/main.js"></script>
   </body>
 </html>

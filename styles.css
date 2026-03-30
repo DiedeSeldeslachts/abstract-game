@@ -340,6 +340,82 @@ h1 {
   padding-left: 18px;
 }
 
+.transform-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background: rgba(28, 17, 13, 0.54);
+  backdrop-filter: blur(5px);
+}
+
+.transform-overlay.is-open {
+  display: flex;
+}
+
+.transform-dialog {
+  width: min(540px, 100%);
+  border-radius: 22px;
+  border: 1px solid var(--panel-border);
+  background: rgba(255, 247, 232, 0.98);
+  box-shadow: var(--shadow);
+  padding: 20px;
+}
+
+.transform-dialog h2 {
+  margin: 0;
+  font-size: 1.6rem;
+}
+
+.transform-dialog .support-text {
+  margin: 10px 0 16px;
+}
+
+.transform-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.transform-option {
+  border: 1px solid rgba(87, 52, 35, 0.2);
+  border-radius: 14px;
+  min-height: 98px;
+  padding: 10px;
+  background: rgba(255, 251, 242, 0.95);
+  color: var(--ink);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: transform 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.transform-option:hover,
+.transform-option:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(143, 45, 31, 0.5);
+  box-shadow: 0 10px 24px rgba(65, 35, 23, 0.17);
+  outline: none;
+}
+
+.transform-glyph {
+  font-family: "Book Antiqua", "Palatino Linotype", serif;
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.transform-label {
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
 @keyframes rise-in {
   from {
     opacity: 0;
@@ -375,5 +451,9 @@ h1 {
 
   .secondary-button {
     width: 100%;
+  }
+
+  .transform-options {
+    grid-template-columns: 1fr;
   }
 }
