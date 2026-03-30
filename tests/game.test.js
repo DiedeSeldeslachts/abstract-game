@@ -213,6 +213,25 @@ function placePiece(state, row, col, player, type, suffix = "1") {
   assert.equal(move.capture, true);
 })();
 
+(function testAIPrefersCaptureOverTeacherTransformWhenBothAvailable() {
+  const state = createEmptyState("black");
+
+  placePiece(state, 4, 4, "black", "teacher");
+  placePiece(state, 4, 5, "black", "pawn");
+  placePiece(state, 3, 3, "white", "pawn", "target");
+  placePiece(state, 0, 0, "white", "pawn", "extra");
+
+  const move = chooseAIMove(state, "black");
+
+  assert.ok(move);
+  assert.equal(move.from.row, 4);
+  assert.equal(move.from.col, 4);
+  assert.equal(move.to.row, 3);
+  assert.equal(move.to.col, 3);
+  assert.equal(move.capture, true);
+  assert.equal(move.transform, false);
+})();
+
 (function testAIIsDeterministicForSameState() {
   const state = createEmptyState("black");
 

@@ -39,6 +39,33 @@ Unknown User
 
 ## Prompt
 
+Fix the teacher ai so it does not put as much weight into creating new pieces with the teacher, it is now the only thing it does
+
+## Summary
+
+Rebalanced Teacher transformation scoring in `src/ai.js` to reduce transform-spam behavior.
+
+Removed the large flat transform bonus and replaced it with a lower-impact heuristic:
+- small score based on positive piece-value gain only,
+- minus a fixed transform action tax,
+- no bonus for equal or lower-value transformations.
+
+This keeps transformations available but makes captures and stronger tactical moves more competitive.
+
+Added regression coverage in `tests/game.test.js` with a scenario where the AI can either capture with Teacher or transform a nearby ally, and asserted that the AI chooses the capture.
+
+Validated with `npm test` and all tests passed.
+
+## Agent
+
+GitHub Copilot (GPT-5.3-Codex)
+
+## User
+
+Unknown User
+
+## Prompt
+
 instead of a browser popup i would like to get an overlay where i can visually choose a new piece
 
 ## Summary

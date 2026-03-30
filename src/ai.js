@@ -13,11 +13,7 @@ const CAPTURE_VALUES = {
   teacher: 9
 };
 
-const TRANSFORM_VALUES = {
-  commander: 13,
-  sentinel: 8,
-  pawn: 4
-};
+const TRANSFORM_ACTION_TAX = 6;
 
 function getOpponent(player) {
   return player === "white" ? "black" : "white";
@@ -63,7 +59,14 @@ function scoreMove(state, move, player) {
   const targetPiece = getPiece(state, move.to.row, move.to.col);
   const captured = targetPiece && targetPiece.player !== player ? targetPiece : null;
   const captureScore = captured ? 40 + CAPTURE_VALUES[captured.type] : 0;
-  const transformScore = move.transform ? 24 + TRANSFORM_VALUES[move.transformTo] : 0;
+  const transformedFromType =
+    move.transform && targetPiece && targetPiece.player === player ? targetPiece.type : null;
+  const transformedToType = move.transform ? move.transformTo : null;
+  const transformValueGain =
+    transformedFromType && transformedToType
+      ? Math.max(0, CAPTURE_VALUES[transformedToType] - CAPTURE_VALUES[transformedFromType])
+      : 0;
+  const transformScore = move.transform ? transformValueGain * 2 - TRANSFORM_ACTION_TAX : 0;
   const postActionSquare = move.transform ? move.from : move.to;
 
   const distanceBefore = getNearestEnemyDistance(state, move.from, player);
