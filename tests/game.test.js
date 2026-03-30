@@ -27,10 +27,10 @@ function placePiece(state, row, col, player, type, suffix = "1") {
   assert.equal(counts.white, 16);
   assert.equal(counts.black, 16);
   assert.equal(state.currentPlayer, "white");
-  assert.equal(getPiece(state, 0, 3)?.type, "commander");
-  assert.equal(getPiece(state, 0, 4)?.type, "commander");
-  assert.equal(getPiece(state, 8, 3)?.type, "commander");
-  assert.equal(getPiece(state, 8, 4)?.type, "commander");
+  assert.equal(getPiece(state, 0, 2)?.type, "commander");
+  assert.equal(getPiece(state, 0, 5)?.type, "commander");
+  assert.equal(getPiece(state, 8, 2)?.type, "commander");
+  assert.equal(getPiece(state, 8, 5)?.type, "commander");
 })();
 
 (function testUniversalAdjacentMovement() {

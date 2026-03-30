@@ -1,7 +1,7 @@
 export const BOARD_ROWS = 9;
 export const BOARD_COLS = 8;
 
-const BACK_RANK = ["pawn", "pawn", "pawn", "commander", "commander", "pawn", "pawn", "pawn"];
+const BACK_RANK = ["pawn", "pawn", "commander", "pawn", "pawn", "commander", "pawn", "pawn"];
 const FILES = ["a", "b", "c", "d", "e", "f", "g", "h"];
 export const TOWN_POSITIONS = [
   { row: 4, col: 2 }, // c5

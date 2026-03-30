@@ -34,10 +34,10 @@ Win by either:
 1. Place the board between both players.
 2. Mark c5 and f5 as town squares.
 3. White setup:
-  - Back rank (rank 9): pawn, pawn, pawn, commander, commander, pawn, pawn, pawn
+  - Back rank (rank 9): pawn, pawn, commander, pawn, pawn, commander, pawn, pawn
   - Front rank (rank 8): eight pawns
 4. Black setup:
-  - Back rank (rank 1): pawn, pawn, pawn, commander, commander, pawn, pawn, pawn
+  - Back rank (rank 1): pawn, pawn, commander, pawn, pawn, commander, pawn, pawn
   - Front rank (rank 2): eight pawns
 5. White takes the first turn.
 
@@ -130,3 +130,4 @@ White wins only if both towns are still occupied by white when white's next turn
 - Added commander aura: adjacent friendly pawns can hop over friendly adjacent pieces.
 - Clarified hop legality (adjacency requirement, blocker requirement, landing constraints).
 - Rewrote examples and edge cases to match the new commander-aura system.
+- Moved starting commanders from files d/e to files c/f.
