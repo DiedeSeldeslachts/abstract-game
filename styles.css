@@ -193,19 +193,6 @@ h1 {
   color: #fff5de;
 }
 
-.square.is-sentinel-shield {
-  background:
-    linear-gradient(rgba(26, 101, 214, 0.18), rgba(26, 101, 214, 0.18)),
-    var(--light-square) !important;
-  color: #f5fbff;
-}
-
-.square.is-sentinel-shield.dark {
-  background:
-    linear-gradient(rgba(17, 73, 162, 0.22), rgba(17, 73, 162, 0.22)),
-    var(--dark-square) !important;
-}
-
 .square.is-selected {
   box-shadow: inset 0 0 0 4px var(--selection);
 }
@@ -335,6 +322,54 @@ h1 {
   border-bottom: 0;
 }
 
+.reserve-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.reserve-button {
+  border: 1px solid rgba(87, 52, 35, 0.24);
+  border-radius: 14px;
+  min-height: 64px;
+  padding: 10px;
+  background: rgba(255, 251, 242, 0.95);
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: transform 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.reserve-button:hover,
+.reserve-button:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(143, 45, 31, 0.45);
+  box-shadow: 0 10px 20px rgba(65, 35, 23, 0.16);
+  outline: none;
+}
+
+.reserve-button.is-active {
+  border-color: rgba(143, 45, 31, 0.82);
+  box-shadow: inset 0 0 0 2px rgba(143, 45, 31, 0.28);
+}
+
+.reserve-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.reserve-symbol {
+  font-family: "Book Antiqua", "Palatino Linotype", serif;
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
 .rules-list {
   margin: 0;
   padding-left: 18px;
@@ -454,6 +489,10 @@ h1 {
   }
 
   .transform-options {
+    grid-template-columns: 1fr;
+  }
+
+  .reserve-actions {
     grid-template-columns: 1fr;
   }
 }

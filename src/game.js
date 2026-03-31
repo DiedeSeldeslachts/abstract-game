@@ -1,14 +1,19 @@
 export const BOARD_ROWS = 9;
 export const BOARD_COLS = 8;
 
-const WHITE_BACK_RANK = ["horse", "sentinel", "commander", "teacher", "pawn", "commander", "sentinel", "horse"];
-const BLACK_BACK_RANK = ["horse", "sentinel", "commander", "pawn", "teacher", "commander", "sentinel", "horse"];
 const FILES = ["a", "b", "c", "d", "e", "f", "g", "h"];
 export const TOWN_POSITIONS = [
   { row: 4, col: 2 }, // c5
   { row: 4, col: 5 }  // f5
 ];
 const UNIT_TYPES = ["commander", "horse", "pawn", "sentinel", "teacher"];
+const PLACEABLE_TYPES = ["pawn", "horse", "sentinel", "teacher"];
+export const PLACEMENT_LIMITS = {
+  pawn: 5,
+  horse: 2,
+  sentinel: 2,
+  teacher: 1
+};
 export const TEACHER_TRANSFORM_TARGET_TYPES = ["commander", "horse", "pawn", "sentinel"];
 const ADJACENT_STEPS = [
   { row: -1, col: -1 },
@@ -36,6 +41,13 @@ function createPieceCounters() {
   };
 }
 
+function createPlacementCounters() {
+  return {
+    white: Object.fromEntries(PLACEABLE_TYPES.map((type) => [type, 0])),
+    black: Object.fromEntries(PLACEABLE_TYPES.map((type) => [type, 0]))
+  };
+}
+
 function makePiece(player, type, counters) {
   counters[player][type] += 1;
 
@@ -54,29 +66,15 @@ function cloneBoard(board) {
   return board.map((row) => row.slice());
 }
 
-function isInsideSentinelShield(row, col, sentinelRow, sentinelCol) {
-  return Math.max(Math.abs(row - sentinelRow), Math.abs(col - sentinelCol)) <= 1;
-}
+function isCapturablePiece(state, row, col, capturePlayer) {
+  // All pieces are capturable
+  const piece = state.board[row][col];
 
-function isBlockedByEnemySentinelShield(state, fromRow, fromCol, toRow, toCol, player) {
-  for (let row = 0; row < BOARD_ROWS; row += 1) {
-    for (let col = 0; col < BOARD_COLS; col += 1) {
-      const piece = state.board[row][col];
-
-      if (!piece || piece.player === player || piece.type !== "sentinel") {
-        continue;
-      }
-
-      const fromInside = isInsideSentinelShield(fromRow, fromCol, row, col);
-      const toInside = isInsideSentinelShield(toRow, toCol, row, col);
-
-      if (fromInside !== toInside) {
-        return true;
-      }
-    }
+  if (!piece) {
+    return false;
   }
 
-  return false;
+  return true;
 }
 
 function getSingleStepMovesForPlayer(state, row, col, player) {
@@ -96,7 +94,8 @@ function getSingleStepMovesForPlayer(state, row, col, player) {
       continue;
     }
 
-    if (isBlockedByEnemySentinelShield(state, row, col, nextRow, nextCol, player)) {
+    // Check if target exists and is capturable
+    if (target && !isCapturablePiece(state, nextRow, nextCol, player)) {
       continue;
     }
 
@@ -163,7 +162,8 @@ function getCommanderAuraHopMovesForPawn(state, row, col, player) {
       continue;
     }
 
-    if (isBlockedByEnemySentinelShield(state, row, col, landingRow, landingCol, player)) {
+    // Check if target exists and is capturable
+    if (target && !isCapturablePiece(state, landingRow, landingCol, player)) {
       continue;
     }
 
@@ -188,18 +188,17 @@ function getHorseMovesForPlayer(state, row, col, player) {
       continue;
     }
 
-    if (isBlockedByEnemySentinelShield(state, row, col, middleRow, middleCol, player)) {
-      continue;
-    }
-
     const middlePiece = state.board[middleRow][middleCol];
 
     if (!middlePiece || middlePiece.player !== player) {
-      movesBySquare.set(`${middleRow},${middleCol}`, {
-        row: middleRow,
-        col: middleCol,
-        capture: Boolean(middlePiece)
-      });
+      const canCapture = !middlePiece || isCapturablePiece(state, middleRow, middleCol, player);
+      if (canCapture) {
+        movesBySquare.set(`${middleRow},${middleCol}`, {
+          row: middleRow,
+          col: middleCol,
+          capture: Boolean(middlePiece)
+        });
+      }
     }
 
     if (middlePiece) {
@@ -219,7 +218,8 @@ function getHorseMovesForPlayer(state, row, col, player) {
       continue;
     }
 
-    if (isBlockedByEnemySentinelShield(state, middleRow, middleCol, landingRow, landingCol, player)) {
+    // Check if landing target is capturable
+    if (landingPiece && !isCapturablePiece(state, landingRow, landingCol, player)) {
       continue;
     }
 
@@ -275,6 +275,11 @@ function getLegalMovesForPlayer(state, row, col, player) {
     return [];
   }
 
+  // Sentinels cannot move
+  if (piece.type === "sentinel") {
+    return [];
+  }
+
   if (piece.type === "commander") {
     return getSingleStepMovesForPlayer(state, row, col, player);
   }
@@ -315,20 +320,17 @@ export function createEmptyState(currentPlayer = "white") {
     capturedPieces: {
       white: [],
       black: []
-    }
+    },
+    pieceCounters: createPieceCounters(),
+    placedPieces: createPlacementCounters()
   };
 }
 
 export function createInitialState() {
   const state = createEmptyState("white");
-  const counters = createPieceCounters();
 
-  for (let col = 0; col < BOARD_COLS; col += 1) {
-    state.board[0][col] = makePiece("white", WHITE_BACK_RANK[col], counters);
-    state.board[1][col] = makePiece("white", "pawn", counters);
-    state.board[7][col] = makePiece("black", "pawn", counters);
-    state.board[8][col] = makePiece("black", BLACK_BACK_RANK[col], counters);
-  }
+  state.board[TOWN_POSITIONS[0].row][TOWN_POSITIONS[0].col] = makePiece("white", "pawn", state.pieceCounters);
+  state.board[TOWN_POSITIONS[1].row][TOWN_POSITIONS[1].col] = makePiece("black", "pawn", state.pieceCounters);
 
   return state;
 }
@@ -351,6 +353,48 @@ export function getLegalMoves(state, row, col) {
   }
 
   return getLegalMovesForPlayer(state, row, col, state.currentPlayer);
+}
+
+export function getRemainingReserveCounts(state, player = state.currentPlayer) {
+  return {
+    pawn: PLACEMENT_LIMITS.pawn - state.placedPieces[player].pawn,
+    horse: PLACEMENT_LIMITS.horse - state.placedPieces[player].horse,
+    sentinel: PLACEMENT_LIMITS.sentinel - state.placedPieces[player].sentinel,
+    teacher: PLACEMENT_LIMITS.teacher - state.placedPieces[player].teacher
+  };
+}
+
+export function getLegalPlacements(state, player = state.currentPlayer) {
+  if (state.winner) {
+    return [];
+  }
+
+  const placements = [];
+  const reserve = getRemainingReserveCounts(state, player);
+
+  for (let row = 0; row < BOARD_ROWS; row += 1) {
+    for (let col = 0; col < BOARD_COLS; col += 1) {
+      if (state.board[row][col] || isTownSquare(row, col)) {
+        continue;
+      }
+
+      for (const pieceType of PLACEABLE_TYPES) {
+        if (reserve[pieceType] <= 0) {
+          continue;
+        }
+
+        placements.push({
+          action: "place",
+          to: { row, col },
+          placeType: pieceType,
+          capture: false,
+          transform: false
+        });
+      }
+    }
+  }
+
+  return placements;
 }
 
 export function getAllLegalMoves(state, player = state.currentPlayer) {
@@ -387,6 +431,7 @@ export function getAllLegalMoves(state, player = state.currentPlayer) {
         }
 
         allMoves.push({
+          action: "move",
           from: { row, col },
           to: { row: move.row, col: move.col },
           capture: move.capture,
@@ -394,6 +439,10 @@ export function getAllLegalMoves(state, player = state.currentPlayer) {
         });
       }
     }
+  }
+
+  for (const placement of getLegalPlacements(state, player)) {
+    allMoves.push(placement);
   }
 
   return allMoves;
@@ -427,6 +476,50 @@ export function isTownSquare(row, col) {
   return TOWN_POSITIONS.some((town) => town.row === row && town.col === col);
 }
 
+function createNextStateBase(state) {
+  return {
+    ...state,
+    board: cloneBoard(state.board),
+    moveNumber: state.moveNumber + 1,
+    currentPlayer: getOpponent(state.currentPlayer),
+    townControlPendingPlayer: state.townControlPendingPlayer,
+    lastAction: null,
+    capturedPieces: {
+      white: [...state.capturedPieces.white],
+      black: [...state.capturedPieces.black]
+    },
+    pieceCounters: {
+      white: { ...state.pieceCounters.white },
+      black: { ...state.pieceCounters.black }
+    },
+    placedPieces: {
+      white: { ...state.placedPieces.white },
+      black: { ...state.placedPieces.black }
+    }
+  };
+}
+
+function resolveWinConditions(nextState, stateBeforeAction, actingPlayer) {
+  const remaining = getRemainingPieceCounts(nextState);
+  const opponent = getOpponent(actingPlayer);
+
+  if (remaining[opponent] === 0) {
+    nextState.winner = actingPlayer;
+  }
+
+  if (
+    !nextState.winner &&
+    stateBeforeAction.townControlPendingPlayer === nextState.currentPlayer &&
+    playerControlsBothTowns(nextState, nextState.currentPlayer)
+  ) {
+    nextState.winner = nextState.currentPlayer;
+  }
+
+  nextState.townControlPendingPlayer = playerControlsBothTowns(nextState, actingPlayer)
+    ? actingPlayer
+    : null;
+}
+
 export function applyMove(state, from, to, options = {}) {
   if (state.winner) {
     throw new Error("The game is already finished.");
@@ -449,18 +542,7 @@ export function applyMove(state, from, to, options = {}) {
     throw new Error("That move is not legal.");
   }
 
-  const nextState = {
-    ...state,
-    board: cloneBoard(state.board),
-    moveNumber: state.moveNumber + 1,
-    currentPlayer: getOpponent(state.currentPlayer),
-    townControlPendingPlayer: state.townControlPendingPlayer,
-    lastAction: null,
-    capturedPieces: {
-      white: [...state.capturedPieces.white],
-      black: [...state.capturedPieces.black]
-    }
-  };
+  const nextState = createNextStateBase(state);
 
   let capturedPiece = null;
   const transformTo = options.transformTo ?? null;
@@ -511,25 +593,53 @@ export function applyMove(state, from, to, options = {}) {
     };
   }
 
-  const remaining = getRemainingPieceCounts(nextState);
-  const opponent = getOpponent(piece.player);
+  resolveWinConditions(nextState, state, piece.player);
 
-  if (remaining[opponent] === 0) {
-    nextState.winner = piece.player;
+  return nextState;
+}
+
+export function applyPlacement(state, to, pieceType) {
+  if (state.winner) {
+    throw new Error("The game is already finished.");
   }
 
-  // A town victory triggers at the start of a player's turn if they still control both towns.
-  if (
-    !nextState.winner &&
-    state.townControlPendingPlayer === nextState.currentPlayer &&
-    playerControlsBothTowns(nextState, nextState.currentPlayer)
-  ) {
-    nextState.winner = nextState.currentPlayer;
+  if (!PLACEABLE_TYPES.includes(pieceType)) {
+    throw new Error("That piece type cannot be placed.");
   }
 
-  nextState.townControlPendingPlayer = playerControlsBothTowns(nextState, piece.player)
-    ? piece.player
-    : null;
+  if (!isInsideBoard(to.row, to.col)) {
+    throw new Error("Placement must be on the board.");
+  }
+
+  if (isTownSquare(to.row, to.col)) {
+    throw new Error("You cannot place directly on a town square.");
+  }
+
+  if (state.board[to.row][to.col]) {
+    throw new Error("You can only place on an empty square.");
+  }
+
+  const remainingReserve = getRemainingReserveCounts(state, state.currentPlayer);
+
+  if (remainingReserve[pieceType] <= 0) {
+    throw new Error(`No remaining ${pieceType} placements.`);
+  }
+
+  const nextState = createNextStateBase(state);
+  const newPiece = makePiece(state.currentPlayer, pieceType, nextState.pieceCounters);
+
+  nextState.board[to.row][to.col] = newPiece;
+  nextState.placedPieces[state.currentPlayer][pieceType] += 1;
+  nextState.lastAction = {
+    kind: "place",
+    player: state.currentPlayer,
+    piece: newPiece,
+    from: null,
+    to: { ...to },
+    capturedPiece: null
+  };
+
+  resolveWinConditions(nextState, state, state.currentPlayer);
 
   return nextState;
 }

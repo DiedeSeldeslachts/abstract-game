@@ -1,11 +1,15 @@
 import {
+  applyPlacement,
   applyMove,
   BOARD_COLS,
   BOARD_ROWS,
   createInitialState,
+  getLegalPlacements,
   getLegalMoves,
+  getRemainingReserveCounts,
   getRemainingPieceCounts,
   isTownSquare,
+  PLACEMENT_LIMITS,
   playerControlsBothTowns,
   toAlgebraic
 } from "./game.js";
@@ -41,6 +45,15 @@ const whiteRemainingElement = document.querySelector("#white-remaining");
 const blackRemainingElement = document.querySelector("#black-remaining");
 const whiteCapturesElement = document.querySelector("#white-captures");
 const blackCapturesElement = document.querySelector("#black-captures");
+const reserveButtons = Array.from(document.querySelectorAll("[data-place-type]"));
+const whiteReservePawnElement = document.querySelector("#white-reserve-pawn");
+const whiteReserveHorseElement = document.querySelector("#white-reserve-horse");
+const whiteReserveSentinelElement = document.querySelector("#white-reserve-sentinel");
+const whiteReserveTeacherElement = document.querySelector("#white-reserve-teacher");
+const blackReservePawnElement = document.querySelector("#black-reserve-pawn");
+const blackReserveHorseElement = document.querySelector("#black-reserve-horse");
+const blackReserveSentinelElement = document.querySelector("#black-reserve-sentinel");
+const blackReserveTeacherElement = document.querySelector("#black-reserve-teacher");
 const restartButton = document.querySelector("#restart-button");
 const transformOverlayElement = document.querySelector("#transform-overlay");
 const transformTitleElement = document.querySelector("#transform-overlay-title");
@@ -51,6 +64,7 @@ const transformCancelButton = document.querySelector("#transform-cancel");
 let state = createInitialState();
 let selectedSquare = null;
 let selectedMoves = [];
+let selectedPlacementType = null;
 let aiThinking = false;
 let aiMoveTimer = null;
 let transformChoiceResolver = null;
@@ -64,46 +78,8 @@ function formatPieceName(piece) {
   return `${titleCase(piece.player)} ${piece.type}`;
 }
 
-function isInsideSentinelShield(row, col, sentinelRow, sentinelCol) {
-  return Math.max(Math.abs(row - sentinelRow), Math.abs(col - sentinelCol)) <= 1;
-}
-
-function getSentinelShieldSquares(gameState) {
-  const squares = new Set();
-
-  for (let row = 0; row < BOARD_ROWS; row += 1) {
-    for (let col = 0; col < BOARD_COLS; col += 1) {
-      const piece = gameState.board[row][col];
-
-      if (!piece || piece.type !== "sentinel") {
-        continue;
-      }
-
-      for (let shieldRow = row - 1; shieldRow <= row + 1; shieldRow += 1) {
-        for (let shieldCol = col - 1; shieldCol <= col + 1; shieldCol += 1) {
-          if (
-            shieldRow >= 0 &&
-            shieldRow < BOARD_ROWS &&
-            shieldCol >= 0 &&
-            shieldCol < BOARD_COLS &&
-            isInsideSentinelShield(shieldRow, shieldCol, row, col)
-          ) {
-            squares.add(`${shieldRow},${shieldCol}`);
-          }
-        }
-      }
-    }
-  }
-
-  return squares;
-}
-
-function getSquareClasses(row, col, sentinelShieldSquares) {
+function getSquareClasses(row, col) {
   const classes = ["square", (row + col) % 2 === 0 ? "light" : "dark"];
-
-  if (sentinelShieldSquares.has(`${row},${col}`)) {
-    classes.push("is-sentinel-shield");
-  }
 
   if (selectedSquare && selectedSquare.row === row && selectedSquare.col === col) {
     classes.push("is-selected");
@@ -152,7 +128,6 @@ function createCoordinateLabels(row, col) {
 
 function renderBoard() {
   boardElement.innerHTML = "";
-  const sentinelShieldSquares = getSentinelShieldSquares(state);
 
   for (let row = 0; row < BOARD_ROWS; row += 1) {
     for (let col = 0; col < BOARD_COLS; col += 1) {
@@ -160,7 +135,7 @@ function renderBoard() {
       const square = document.createElement("button");
 
       square.type = "button";
-      square.className = getSquareClasses(row, col, sentinelShieldSquares);
+      square.className = getSquareClasses(row, col);
       square.dataset.row = String(row);
       square.dataset.col = String(col);
       square.setAttribute("role", "gridcell");
@@ -196,12 +171,15 @@ function renderSidebar() {
   whiteCapturesElement.textContent = String(state.capturedPieces.white.length);
   blackCapturesElement.textContent = String(state.capturedPieces.black.length);
 
-  if (selectedSquare) {
+  if (selectedPlacementType) {
+    const reserveLeft = getRemainingReserveCounts(state, state.currentPlayer)[selectedPlacementType];
+    selectionTextElement.textContent = `${titleCase(state.currentPlayer)} is placing ${selectedPlacementType}. Select any highlighted non-town square. ${reserveLeft} remaining.`;
+  } else if (selectedSquare) {
     const piece = state.board[selectedSquare.row][selectedSquare.col];
     const moveCount = selectedMoves.length;
     selectionTextElement.textContent = `${formatPieceName(piece)} on ${toAlgebraic(selectedSquare)} has ${moveCount} legal ${moveCount === 1 ? "move" : "moves"}.`;
   } else {
-    selectionTextElement.textContent = "Select one of the current player's pieces to reveal its legal moves.";
+    selectionTextElement.textContent = "Choose to move a piece or place one reserve unit, then select a legal target square.";
   }
 
   if (!state.lastAction) {
@@ -210,8 +188,14 @@ function renderSidebar() {
   }
 
   const pieceName = formatPieceName(state.lastAction.piece);
-  const from = toAlgebraic(state.lastAction.from);
   const to = toAlgebraic(state.lastAction.to);
+
+  if (state.lastAction.kind === "place") {
+    lastActionTextElement.textContent = `${pieceName} was placed on ${to}.`;
+    return;
+  }
+
+  const from = toAlgebraic(state.lastAction.from);
 
   if (state.lastAction.capturedPiece) {
     lastActionTextElement.textContent = `${pieceName} captured ${formatPieceName(state.lastAction.capturedPiece)} from ${from} to ${to}.`;
@@ -224,6 +208,33 @@ function renderSidebar() {
   }
 
   lastActionTextElement.textContent = `${pieceName} moved from ${from} to ${to}.`;
+}
+
+function renderReservePanel() {
+  const whiteReserve = getRemainingReserveCounts(state, "white");
+  const blackReserve = getRemainingReserveCounts(state, "black");
+
+  whiteReservePawnElement.textContent = String(whiteReserve.pawn);
+  whiteReserveHorseElement.textContent = String(whiteReserve.horse);
+  whiteReserveSentinelElement.textContent = String(whiteReserve.sentinel);
+  whiteReserveTeacherElement.textContent = String(whiteReserve.teacher);
+  blackReservePawnElement.textContent = String(blackReserve.pawn);
+  blackReserveHorseElement.textContent = String(blackReserve.horse);
+  blackReserveSentinelElement.textContent = String(blackReserve.sentinel);
+  blackReserveTeacherElement.textContent = String(blackReserve.teacher);
+
+  for (const button of reserveButtons) {
+    const pieceType = button.dataset.placeType;
+    const reserveLeft = getRemainingReserveCounts(state, HUMAN_PLAYER)[pieceType];
+    const isActive = selectedPlacementType === pieceType;
+    button.classList.toggle("is-active", isActive);
+    button.disabled =
+      state.winner !== null ||
+      aiThinking ||
+      transformChoicePending ||
+      state.currentPlayer !== HUMAN_PLAYER ||
+      reserveLeft <= 0;
+  }
 }
 
 function renderStatus() {
@@ -245,24 +256,31 @@ function renderStatus() {
     return;
   }
 
+  if (selectedPlacementType) {
+    statusTextElement.textContent = `${titleCase(HUMAN_PLAYER)} is placing a ${selectedPlacementType}. Placement is legal on empty non-town squares only.`;
+    return;
+  }
+
   if (selectedSquare) {
     const piece = state.board[selectedSquare.row][selectedSquare.col];
     statusTextElement.textContent = `${formatPieceName(piece)} is selected. Choose one highlighted legal destination.`;
     return;
   }
 
-  statusTextElement.textContent = `${titleCase(state.currentPlayer)} to move. Most pieces move one square; horses move one or two squares in a straight line. Pawns adjacent to a commander can hop over friendly pieces. Teachers can transform friendly units into any non-Teacher piece. Sentinels project a 1-tile shield enemies cannot enter or leave. Hold both towns for one full round to win!`;
+  statusTextElement.textContent = `${titleCase(state.currentPlayer)} to act. On each turn, either move an existing piece or place one reserve piece onto any empty non-town square. Hold both towns for one full round to win.`;
 }
 
 function render() {
   renderStatus();
   renderBoard();
   renderSidebar();
+  renderReservePanel();
 }
 
 function clearSelection() {
   selectedSquare = null;
   selectedMoves = [];
+  selectedPlacementType = null;
 }
 
 function closeTransformOverlay(result = null) {
@@ -337,7 +355,10 @@ function performAIMove() {
     return;
   }
 
-  state = applyMove(state, move.from, move.to, { transformTo: move.transformTo });
+  state =
+    move.action === "place"
+      ? applyPlacement(state, move.to, move.placeType)
+      : applyMove(state, move.from, move.to, { transformTo: move.transformTo });
   clearSelection();
   render();
 }
@@ -375,6 +396,20 @@ async function handleSquareClick(event) {
   const col = Number(square.dataset.col);
   const targetMove = selectedMoves.find((move) => move.row === row && move.col === col);
 
+  if (selectedPlacementType) {
+    if (targetMove) {
+      state = applyPlacement(state, { row, col }, selectedPlacementType);
+      clearSelection();
+      render();
+
+      if (!state.winner) {
+        scheduleAIMove();
+      }
+    }
+
+    return;
+  }
+
   if (selectedSquare && targetMove) {
     let transformTo = null;
 
@@ -411,6 +446,32 @@ async function handleSquareClick(event) {
   render();
 }
 
+function selectPlacementType(pieceType) {
+  if (state.winner || aiThinking || transformChoicePending || state.currentPlayer !== HUMAN_PLAYER) {
+    return;
+  }
+
+  const reserveLeft = getRemainingReserveCounts(state, HUMAN_PLAYER)[pieceType];
+
+  if (reserveLeft <= 0) {
+    return;
+  }
+
+  if (selectedPlacementType === pieceType) {
+    clearSelection();
+    render();
+    return;
+  }
+
+  selectedPlacementType = pieceType;
+  selectedSquare = null;
+  selectedMoves = getLegalPlacements(state, HUMAN_PLAYER)
+    .filter((placement) => placement.placeType === pieceType)
+    .map((placement) => ({ row: placement.to.row, col: placement.to.col, capture: false }));
+
+  render();
+}
+
 function restartGame() {
   if (aiMoveTimer) {
     window.clearTimeout(aiMoveTimer);
@@ -443,5 +504,14 @@ window.addEventListener("keydown", (event) => {
 
 boardElement.addEventListener("click", handleSquareClick);
 restartButton.addEventListener("click", restartGame);
+for (const button of reserveButtons) {
+  button.addEventListener("click", () => {
+    const pieceType = button.dataset.placeType;
+
+    if (pieceType && Object.prototype.hasOwnProperty.call(PLACEMENT_LIMITS, pieceType)) {
+      selectPlacementType(pieceType);
+    }
+  });
+}
 
 render();

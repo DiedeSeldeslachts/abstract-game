@@ -1,4 +1,5 @@
 import {
+  applyPlacement,
   applyMove,
   getAllLegalMoves,
   getPiece,
@@ -22,6 +23,14 @@ const TOWN_OCCUPATION_SCORE = 260;
 const OPPONENT_TOWN_OCCUPATION_PENALTY = 280;
 const TOWN_MOVE_BONUS = 90;
 const TOWN_CAPTURE_BONUS = 220;
+const PLACEMENT_NEAR_ENEMY_WEIGHT = 10;
+const PLACEMENT_TOWN_PROXIMITY_WEIGHT = 22;
+const PLACEMENT_BASE_SCORES = {
+  pawn: 62,
+  horse: 84,
+  sentinel: 92,
+  teacher: 102
+};
 
 function getOpponent(player) {
   return player === "white" ? "black" : "white";
@@ -67,7 +76,7 @@ function isTownSquare(square) {
 }
 
 function getForwardProgress(move, player) {
-  if (move.transform) {
+  if (move.transform || move.action === "place") {
     return 0;
   }
 
@@ -75,7 +84,36 @@ function getForwardProgress(move, player) {
   return player === "white" ? rowDelta : -rowDelta;
 }
 
+function getNearestTownDistance(square) {
+  let minDistance = Number.POSITIVE_INFINITY;
+
+  for (const town of TOWN_POSITIONS) {
+    const distance = getChebyshevDistance(square, town);
+    if (distance < minDistance) {
+      minDistance = distance;
+    }
+  }
+
+  return minDistance;
+}
+
 function scoreMove(state, move, player) {
+  if (move.action === "place") {
+    const opponent = getOpponent(player);
+    const nextState = applyPlacement(state, move.to, move.placeType);
+    const nearEnemyDistance = getNearestEnemyDistance(nextState, move.to, player);
+    const townDistance = getNearestTownDistance(move.to);
+    const placementRiskPenalty = countOpponentCapturesOnSquare(nextState, opponent, move.to) * 12;
+    const winScore = nextState.winner === player ? 10_000 : 0;
+    const basePlacement = PLACEMENT_BASE_SCORES[move.placeType] ?? 40;
+    const enemyPressureScore = Number.isFinite(nearEnemyDistance)
+      ? (8 - nearEnemyDistance) * PLACEMENT_NEAR_ENEMY_WEIGHT
+      : 0;
+    const townProximityScore = (8 - townDistance) * PLACEMENT_TOWN_PROXIMITY_WEIGHT;
+
+    return winScore + basePlacement + enemyPressureScore + townProximityScore - placementRiskPenalty;
+  }
+
   const opponent = getOpponent(player);
   const targetPiece = getPiece(state, move.to.row, move.to.col);
   const captured = targetPiece && targetPiece.player !== player ? targetPiece : null;
@@ -150,6 +188,22 @@ function scoreMove(state, move, player) {
 }
 
 function compareMoveOrder(a, b) {
+  if (a.action !== b.action) {
+    return a.action === "move" ? -1 : 1;
+  }
+
+  if (a.action === "place" && b.action === "place") {
+    if (a.placeType !== b.placeType) {
+      return String(a.placeType).localeCompare(String(b.placeType));
+    }
+
+    if (a.to.row !== b.to.row) {
+      return a.to.row - b.to.row;
+    }
+
+    return a.to.col - b.to.col;
+  }
+
   if (a.from.row !== b.from.row) {
     return a.from.row - b.from.row;
   }
@@ -195,11 +249,13 @@ export function chooseAIMove(state, player = state.currentPlayer) {
   }
 
   return {
-    from: { ...bestMove.from },
+    action: bestMove.action,
+    from: bestMove.from ? { ...bestMove.from } : null,
     to: { ...bestMove.to },
     capture: bestMove.capture,
     piece: bestMove.piece,
     transform: Boolean(bestMove.transform),
-    transformTo: bestMove.transformTo ?? null
+    transformTo: bestMove.transformTo ?? null,
+    placeType: bestMove.placeType ?? null
   };
 }

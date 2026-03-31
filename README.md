@@ -1,13 +1,18 @@
 # Kingstep
 
-Kingstep is a chess-inspired abstract capture game played on a 9x8 board.
-Each side begins with a modified chess-style army where the queen and king are replaced
-by two commanders on the back rank. Horses start on files a and h and move one or two squares in a straight line.
-Most pieces move exactly one square in any direction,
-while commanders grant adjacent friendly pawns a hop move over friendly pieces. There is no check,
-checkmate, castling, en passant, or promotion.
-You win by capturing every opposing piece or by controlling both town squares through one full round.
+Kingstep is a placement-first abstract capture game on a 9x8 board.
+Each side starts with only one pawn on a town square.
+On every turn, a player chooses exactly one action:
 
+- Move one piece already on the board, or
+- Place one reserve piece on an empty non-town square.
+
+Reserve limits per player are 5 pawns, 2 horses, 2 sentinels, and 1 teacher.
+Most pieces move one square in any direction, horses move one or two squares in a straight line,
+commanders grant adjacent friendly pawns a hop option, teachers can transform adjacent friendly pieces,
+and sentinels project a 1-tile shield enemies cannot cross.
+
+You win by capturing every opposing piece or by controlling both town squares through one full round.
 In this implementation, you play as White and the AI controls Black.
 
 ## Run

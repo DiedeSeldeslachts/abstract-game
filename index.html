@@ -12,9 +12,9 @@
         <p class="eyebrow">Abstract Capture Game</p>
         <h1>Kingstep</h1>
         <p class="hero-copy">
-          Modified chess setup with two commanders per side. Most pieces advance like a king,
-          while horses on files a and h move one or two squares in a straight line. Pawns adjacent to commanders can hop over friendly pieces. Win by eliminating all opponents OR 
-          controlling both towns on the extended ninth rank.
+          Each player starts with one pawn on a town. Every turn you choose one action:
+          move an existing piece or place a reserve piece on any empty non-town square.
+          Reserve limits are fixed, so timing your deployments matters as much as movement.
         </p>
       </header>
 
@@ -37,6 +37,29 @@
 
         <aside class="sidebar">
           <section class="card">
+            <h2>Reserve Placement</h2>
+            <p class="support-text">Choose one piece type, then click an empty non-town square.</p>
+            <div class="reserve-actions">
+              <button class="reserve-button" type="button" data-place-type="pawn">
+                <span class="reserve-symbol">♙</span>
+                <span>Place Pawn</span>
+              </button>
+              <button class="reserve-button" type="button" data-place-type="horse">
+                <span class="reserve-symbol">♘</span>
+                <span>Place Horse</span>
+              </button>
+              <button class="reserve-button" type="button" data-place-type="sentinel">
+                <span class="reserve-symbol">♖</span>
+                <span>Place Sentinel</span>
+              </button>
+              <button class="reserve-button" type="button" data-place-type="teacher">
+                <span class="reserve-symbol">♗</span>
+                <span>Place Teacher</span>
+              </button>
+            </div>
+          </section>
+
+          <section class="card">
             <h2>Battle State</h2>
             <div class="metric-row">
               <span>White remaining</span>
@@ -57,6 +80,42 @@
           </section>
 
           <section class="card">
+            <h2>Reserve Remaining</h2>
+            <div class="metric-row">
+              <span>White Pawns</span>
+              <strong id="white-reserve-pawn"></strong>
+            </div>
+            <div class="metric-row">
+              <span>White Horses</span>
+              <strong id="white-reserve-horse"></strong>
+            </div>
+            <div class="metric-row">
+              <span>White Sentinels</span>
+              <strong id="white-reserve-sentinel"></strong>
+            </div>
+            <div class="metric-row">
+              <span>White Teacher</span>
+              <strong id="white-reserve-teacher"></strong>
+            </div>
+            <div class="metric-row">
+              <span>Black Pawns</span>
+              <strong id="black-reserve-pawn"></strong>
+            </div>
+            <div class="metric-row">
+              <span>Black Horses</span>
+              <strong id="black-reserve-horse"></strong>
+            </div>
+            <div class="metric-row">
+              <span>Black Sentinels</span>
+              <strong id="black-reserve-sentinel"></strong>
+            </div>
+            <div class="metric-row">
+              <span>Black Teacher</span>
+              <strong id="black-reserve-teacher"></strong>
+            </div>
+          </section>
+
+          <section class="card">
             <h2>Selection</h2>
             <p id="selection-text" class="support-text"></p>
           </section>
@@ -69,11 +128,13 @@
           <section class="card">
             <h2>Rules Snapshot</h2>
             <ul class="rules-list">
-              <li>Back rank uses horses on files a and h, commanders on c and f.</li>
+              <li>Start with one pawn each: White on c5, Black on f5.</li>
+              <li>Each turn: either move one on-board piece or place one reserve piece.</li>
+              <li>Placement is legal on empty non-town squares only.</li>
+              <li>Reserve limits per player: 5 pawns, 2 horses, 2 sentinels, 1 teacher.</li>
               <li>Most pieces move one square in any direction.</li>
               <li>Horses move one or two squares in a straight line.</li>
               <li>Pawns adjacent to a commander may hop over one friendly adjacent piece.</li>
-              <li>You capture by moving onto an enemy piece.</li>
               <li>You win by controlling both towns OR eliminating all enemy pieces.</li>
             </ul>
           </section>

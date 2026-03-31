@@ -3,13 +3,13 @@
 ## Overview
 
 Kingstep is a two-player abstract strategy game played on a 9x8 board.
-Each side has two commanders, two sentinels, one teacher, two horses, and nine pawns.
-Most pieces move one square in any direction.
-Horses move one or two squares in a straight line.
-Commanders no longer move two squares; instead, each commander grants a local aura:
-any friendly pawn adjacent to that commander can hop over a friendly adjacent piece.
-Teachers can transform friendly pieces into other non-Teacher piece types.
-Sentinels project a 1-tile shield that enemy units cannot cross.
+Each player starts with only one pawn already on the board, and all other units
+enter play through placement actions during the game.
+
+On each turn, a player chooses exactly one action:
+
+1. Move one of their pieces already on the board, or
+2. Place one reserve piece on an empty non-town square.
 
 You can win by eliminating all opposing pieces or by controlling both town squares
 through one full opponent turn.
@@ -18,18 +18,12 @@ through one full opponent turn.
 
 - 1 board with 9 ranks and 8 files
 - 2 town squares at c5 and f5
-- 16 white pieces:
-  - 2 commanders
-  - 2 horses
-  - 2 sentinels
-  - 1 teacher
-  - 9 pawns
-- 16 black pieces:
-  - 2 commanders
-  - 2 horses
-  - 2 sentinels
-  - 1 teacher
-  - 9 pawns
+- White pieces:
+  - 1 starting pawn (already on c5)
+  - Reserve pool: 5 pawns, 2 horses, 2 sentinels, 1 teacher
+- Black pieces:
+  - 1 starting pawn (already on f5)
+  - Reserve pool: 5 pawns, 2 horses, 2 sentinels, 1 teacher
 
 ## Objective
 
@@ -42,150 +36,132 @@ Win by either:
 
 1. Place the board between both players.
 2. Mark c5 and f5 as town squares.
-3. White setup:
-  - Back rank (rank 9): horse, sentinel, commander, teacher, pawn, commander, sentinel, horse
-  - Front rank (rank 8): eight pawns
-4. Black setup:
-  - Back rank (rank 1): horse, sentinel, commander, pawn, teacher, commander, sentinel, horse
-  - Front rank (rank 2): eight pawns
-5. White takes the first turn.
+3. Place one white pawn on c5.
+4. Place one black pawn on f5.
+5. Keep all other pieces in each player's reserve.
+6. White takes the first turn.
 
 ## Turn Structure
 
-On your turn:
+On your turn, choose exactly one action:
 
-1. Choose one of your pieces.
-2. Move it to a legal destination.
-3. If the destination contains an opposing piece, capture it.
-4. End your turn.
+1. Move action:
+   - Choose one of your on-board pieces.
+   - Move it to a legal destination.
+   - If the destination has an opposing piece, capture it.
+2. Place action:
+   - Choose one piece type from your reserve that still has placements available.
+   - Place that piece on any empty square that is not a town square.
+
+Then end your turn.
 
 There are no bonus actions.
 
 ## Actions and Move Rules
 
-- All pieces may move exactly one square to any adjacent square, including diagonals.
-- Horses move one or two squares in one straight direction (orthogonal or diagonal).
-- For a two-square horse move, the intermediate square must be empty.
-- You may move into empty squares or capture by moving onto an enemy square.
+Global movement and capture rules:
+
 - You may not move off-board.
 - You may not move onto a square occupied by a friendly piece.
+- Captures happen by moving onto an enemy-occupied square.
+- Placement never captures.
+
+Reserve placement limits (per player):
+
+- Pawn: up to 5 placements
+- Horse: up to 2 placements
+- Sentinel: up to 2 placements
+- Teacher: up to 1 placement
+
+Piece movement rules:
+
+- Most pieces move exactly one square to any adjacent square, including diagonals.
+- Horses move one or two squares in one straight direction (orthogonal or diagonal).
+- For a two-square horse move, the intermediate square must be empty.
+- Sentinels cannot move. They occupy a square but have no legal move actions.
 
 Teacher transformation rule:
 
-- A teacher may use its action to transform one friendly non-Teacher piece instead of moving.
-- The transformed piece must be within range 1 of the teacher (an adjacent square, including diagonals).
-- The chosen friendly piece keeps its square and is changed into exactly one of:
-  commander, horse, pawn, or sentinel.
+- A teacher may use its move action to transform one adjacent friendly non-Teacher piece instead of moving.
+- The transformed piece stays on its current square.
+- The chosen type must be one of: commander, horse, pawn, sentinel.
 - The chosen type cannot be teacher.
-- The transformed piece cannot stay the same type it already was.
-- The teacher does not move when performing a transformation.
+- The transformed piece cannot keep its current type.
 
 Commander aura rule:
 
-- A pawn that is adjacent to at least one friendly commander gains hop options.
-- A hop is a move two squares in a straight adjacent direction.
+- A pawn adjacent to at least one friendly commander gains hop options.
+- A hop moves two squares in one adjacent direction.
 - The first square in that direction must contain a friendly piece to hop over.
-- The landing square must be on the board and not occupied by a friendly piece.
-- The landing square may be empty or occupied by an enemy piece (capture).
+- The landing square must be on-board and not occupied by a friendly piece.
+- The landing square may be empty or enemy-occupied (capture).
 
-Commanders themselves do not hop and move only one square.
-
-Sentinel shield rule:
-
-- Each sentinel creates a shield on the 8 surrounding squares plus its own square
-  (Chebyshev radius 1 from that sentinel).
-- Enemy units cannot enter that shield from outside it.
-- Enemy units already inside that shield cannot leave it.
-- Enemy units may still move and capture within the shield.
-- Friendly units are never restricted by their own sentinel shields.
+Commanders themselves move one square and do not hop.
 
 ## Special Rules and Edge Cases
 
+- Town squares are legal to move into and legal to occupy.
+- Town squares are not legal placement squares.
 - There is no check or checkmate.
 - There is no castling.
 - There is no promotion.
 - There is no en passant.
-- No piece has a forward-only rule; movement is fully adjacent in all directions.
-- Horses are the only pieces that may move two squares in a straight line.
-- A pawn can have both normal one-step moves and commander-aura hop moves in the same turn.
-- A pawn only needs to be adjacent to one friendly commander to gain hop moves.
-- A teacher can only transform adjacent friendly non-Teacher pieces (range 1).
-- Sentinel shields are checked per enemy sentinel; if a move crosses any enemy shield boundary,
-  that move is illegal.
+- No piece has a forward-only rule; movement is adjacent in all directions.
+- Horses are the only pieces that can move two squares in a straight line.
+- A pawn only needs one adjacent friendly commander to unlock hop moves.
+- Sentinel shield legality is checked against every enemy sentinel.
+- A piece placed on the previous turn can be captured normally on the next turn; placement grants no capture immunity.
+- If a player has no legal move actions but has at least one legal placement, they can still take a turn by placing.
 
 ## End of Game
 
 The game ends immediately when either condition is met:
-
-1. One player has no pieces left.
+ One player has no pieces left on the board.
 2. A player's turn begins while that player still controls both towns.
 
 ## Winning
 
-You win if either of the following becomes true:
+You win if either becomes true:
 
-1. The opponent has zero pieces remaining, or
+1. The opponent has zero on-board pieces remaining, or
 2. Your turn begins and you occupy both c5 and f5.
 
-If you occupy both towns on your move, you do not win immediately.
+If you occupy both towns during your action, you do not win immediately.
 You must still occupy both towns when your next turn begins.
 
 ## Examples
 
-### Example 1: Normal adjacent move
+### Example 1: Placement action
 
-A pawn on e4 may move to any adjacent square (including diagonals) that is either empty
-or occupied by an enemy piece.
+White chooses a place action and places a horse on b7.
+That square is empty and not a town square, so the action is legal.
+White's remaining horse placements decrease by one.
 
-### Example 2: Commander aura enables a hop
+### Example 2: Illegal placement on a town
+
+Black cannot place a sentinel directly on c5 or f5,
+even if the town square is empty.
+
+### Example 3: Commander aura hop
 
 White commander on e5, white pawn on d5, white pawn on d4.
-Because d5 is adjacent to a commander, the pawn on d5 may hop over the friendly pawn on d4
-to d3, if d3 is not occupied by a white piece.
+Because d5 is adjacent to a commander, the pawn on d5 may hop over d4 to d3,
+if d3 is not occupied by a white piece.
 
-### Example 3: Hop capture
+### Example 4: Sentinel protection
 
-Using the previous position, if d3 contains a black piece, the pawn on d5 may hop to d3
-and capture it.
-
-### Example 4: No adjacent commander, no hop
-
-If the commander on e5 moves away and the pawn on d5 is no longer adjacent to any friendly commander,
-that pawn loses all hop options and can only use normal one-step moves.
-
-### Example 5: Town control win timing
-
-If white occupies both c5 and f5, white creates a pending town win.
-White wins only if both towns are still occupied by white when white's next turn begins.
-
-### Example 6: Sentinel shield boundary
-
-White sentinel on e5. A black pawn on e7 cannot move to e6 because that would enter the shield.
-If a black pawn is already on e6, it cannot move to e7 because that would leave the shield,
-but it may move to d6 or capture on e5 because those squares remain inside the shield.
-
-### Example 7: Teacher transformation
-
-White teacher on d9 chooses the adjacent friendly pawn on e8 and transforms it into a sentinel.
-The teacher remains on d9, the chosen pawn's square stays e8, and the turn ends normally.
-
-### Example 8: Horse move
-
-White horse on a9 may move to a8, b9, or b8 as one-step straight moves.
-It may also move to a7, c9, or c7 if the intermediate square on that line is empty
-and the destination is not occupied by a white piece.
+White occupies both c5 and f5 at the end of White's turn.
+White creates pending town control.
+White wins only if both towns are still white-occupied
+when White's next turn begins.
 
 ## Revision Notes
 
-- Removed commander two-space movement.
-- Added commander aura: adjacent friendly pawns can hop over friendly adjacent pieces.
-- Clarified hop legality (adjacency requirement, blocker requirement, landing constraints).
-- Rewrote examples and edge cases to match the new commander-aura system.
-- Moved starting commanders from files d/e to files c/f.
-- Added sentinel pieces on files b/g of each back rank.
-- Added sentinel shield rule: enemy pieces cannot enter or leave radius-1 shield zones.
-- Added teacher piece: starts on d-file for White and e-file for Black.
-- Added teacher transformation action for friendly non-Teacher pieces.
-- Changed teacher transformation range to 1 (adjacent squares only).
-- Added horse piece on files a/h for both players.
-- Added horse movement: one or two squares in a straight line; two-square moves require an empty intermediate square.
+- Replaced full-army starting setup with minimal setup: one white pawn on c5 and one black pawn on f5.
+- Added dual-action turn structure: move one piece or place one reserve piece.
+- Added reserve placement limits per player: 5 pawns, 2 horses, 2 sentinels, 1 teacher.
+- Added placement restriction: pieces cannot be placed directly on town squares.
+- Updated setup, edge cases, and examples to align with placement-first gameplay.
+- Updated sentinel mechanics: sentinels can now be captured and cannot move.
+- Removed sentinel protection rule: pawns adjacent to sentinels are no longer protected from capture.
+- Clarified that newly placed pieces are immediately capturable on the opponent's next turn.
