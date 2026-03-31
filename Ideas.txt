@@ -1,0 +1,7 @@
+Idea, don't have start positions, but let the players place the tokens one by one
+
+Make a full game around the abstract strategy game, with cards (maybe with concordia style action cards)
+You have to balance getting resources to get points or to make your army stronger on the abstract game board
+on the tiles you will have randomised resources/points of interest to capture/protect
+pawns are weaker, but can gather stuff from the map
+The more army is destroyed the more you can do off the board, maybe you have to pledge the pieces somewhere to gain benefits somewhere else (call it "deplomacy" or whatever)

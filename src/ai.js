@@ -8,6 +8,7 @@ import {
 
 const CAPTURE_VALUES = {
   commander: 12,
+  horse: 6,
   pawn: 4,
   sentinel: 8,
   teacher: 10

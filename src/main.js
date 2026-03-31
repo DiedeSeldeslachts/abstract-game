@@ -18,12 +18,14 @@ const AI_MOVE_DELAY_MS = 320;
 const PIECE_SYMBOLS = {
   white: {
     commander: "♔",
+    horse: "♘",
     pawn: "♙",
     sentinel: "♖",
     teacher: "♗"
   },
   black: {
     commander: "♚",
+    horse: "♞",
     pawn: "♟",
     sentinel: "♜",
     teacher: "♝"
@@ -249,7 +251,7 @@ function renderStatus() {
     return;
   }
 
-  statusTextElement.textContent = `${titleCase(state.currentPlayer)} to move. Most pieces move one square; pawns adjacent to a commander can hop over friendly pieces. Teachers can transform friendly units into any non-Teacher piece. Sentinels project a 1-tile shield enemies cannot enter or leave. Hold both towns for one full round to win!`;
+  statusTextElement.textContent = `${titleCase(state.currentPlayer)} to move. Most pieces move one square; horses move one or two squares in a straight line. Pawns adjacent to a commander can hop over friendly pieces. Teachers can transform friendly units into any non-Teacher piece. Sentinels project a 1-tile shield enemies cannot enter or leave. Hold both towns for one full round to win!`;
 }
 
 function render() {

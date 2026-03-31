@@ -1,15 +1,15 @@
 export const BOARD_ROWS = 9;
 export const BOARD_COLS = 8;
 
-const WHITE_BACK_RANK = ["pawn", "sentinel", "commander", "teacher", "pawn", "commander", "sentinel", "pawn"];
-const BLACK_BACK_RANK = ["pawn", "sentinel", "commander", "pawn", "teacher", "commander", "sentinel", "pawn"];
+const WHITE_BACK_RANK = ["horse", "sentinel", "commander", "teacher", "pawn", "commander", "sentinel", "horse"];
+const BLACK_BACK_RANK = ["horse", "sentinel", "commander", "pawn", "teacher", "commander", "sentinel", "horse"];
 const FILES = ["a", "b", "c", "d", "e", "f", "g", "h"];
 export const TOWN_POSITIONS = [
   { row: 4, col: 2 }, // c5
   { row: 4, col: 5 }  // f5
 ];
-const UNIT_TYPES = ["commander", "pawn", "sentinel", "teacher"];
-export const TEACHER_TRANSFORM_TARGET_TYPES = ["commander", "pawn", "sentinel"];
+const UNIT_TYPES = ["commander", "horse", "pawn", "sentinel", "teacher"];
+export const TEACHER_TRANSFORM_TARGET_TYPES = ["commander", "horse", "pawn", "sentinel"];
 const ADJACENT_STEPS = [
   { row: -1, col: -1 },
   { row: -1, col: 0 },
@@ -177,6 +177,62 @@ function getCommanderAuraHopMovesForPawn(state, row, col, player) {
   return moves;
 }
 
+function getHorseMovesForPlayer(state, row, col, player) {
+  const movesBySquare = new Map();
+
+  for (const step of ADJACENT_STEPS) {
+    const middleRow = row + step.row;
+    const middleCol = col + step.col;
+
+    if (!isInsideBoard(middleRow, middleCol)) {
+      continue;
+    }
+
+    if (isBlockedByEnemySentinelShield(state, row, col, middleRow, middleCol, player)) {
+      continue;
+    }
+
+    const middlePiece = state.board[middleRow][middleCol];
+
+    if (!middlePiece || middlePiece.player !== player) {
+      movesBySquare.set(`${middleRow},${middleCol}`, {
+        row: middleRow,
+        col: middleCol,
+        capture: Boolean(middlePiece)
+      });
+    }
+
+    if (middlePiece) {
+      continue;
+    }
+
+    const landingRow = middleRow + step.row;
+    const landingCol = middleCol + step.col;
+
+    if (!isInsideBoard(landingRow, landingCol)) {
+      continue;
+    }
+
+    const landingPiece = state.board[landingRow][landingCol];
+
+    if (landingPiece && landingPiece.player === player) {
+      continue;
+    }
+
+    if (isBlockedByEnemySentinelShield(state, middleRow, middleCol, landingRow, landingCol, player)) {
+      continue;
+    }
+
+    movesBySquare.set(`${landingRow},${landingCol}`, {
+      row: landingRow,
+      col: landingCol,
+      capture: Boolean(landingPiece)
+    });
+  }
+
+  return Array.from(movesBySquare.values());
+}
+
 function getTeacherTransformTargets(state, row, col, player) {
   const targets = [];
 
@@ -225,6 +281,10 @@ function getLegalMovesForPlayer(state, row, col, player) {
 
   if (piece.type === "teacher") {
     return [...getSingleStepMovesForPlayer(state, row, col, player), ...getTeacherTransformTargets(state, row, col, player)];
+  }
+
+  if (piece.type === "horse") {
+    return getHorseMovesForPlayer(state, row, col, player);
   }
 
   if (piece.type !== "pawn") {

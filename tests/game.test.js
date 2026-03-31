@@ -32,12 +32,16 @@ function placePiece(state, row, col, player, type, suffix = "1") {
   assert.equal(getPiece(state, 0, 1)?.type, "sentinel");
   assert.equal(getPiece(state, 0, 6)?.type, "sentinel");
   assert.equal(getPiece(state, 0, 3)?.type, "teacher");
+  assert.equal(getPiece(state, 0, 0)?.type, "horse");
+  assert.equal(getPiece(state, 0, 7)?.type, "horse");
   assert.equal(getPiece(state, 0, 4)?.type, "pawn");
   assert.equal(getPiece(state, 8, 2)?.type, "commander");
   assert.equal(getPiece(state, 8, 5)?.type, "commander");
   assert.equal(getPiece(state, 8, 1)?.type, "sentinel");
   assert.equal(getPiece(state, 8, 6)?.type, "sentinel");
   assert.equal(getPiece(state, 8, 4)?.type, "teacher");
+  assert.equal(getPiece(state, 8, 0)?.type, "horse");
+  assert.equal(getPiece(state, 8, 7)?.type, "horse");
   assert.equal(getPiece(state, 8, 3)?.type, "pawn");
 })();
 
@@ -54,9 +58,31 @@ function placePiece(state, row, col, player, type, suffix = "1") {
   const transformOnPawn = moves.find((move) => move.row === 4 && move.col === 5 && move.transform);
 
   assert.ok(transformOnPawn);
-  assert.deepEqual(transformOnPawn.transformOptions.sort(), ["commander", "sentinel"]);
+  assert.deepEqual(transformOnPawn.transformOptions.sort(), ["commander", "horse", "sentinel"]);
   assert.ok(!moves.some((move) => move.row === 4 && move.col === 4 && move.transform));
   assert.ok(!moves.some((move) => move.row === 1 && move.col === 1 && move.transform));
+})();
+
+(function testHorseMovesOneOrTwoSquaresStraight() {
+  const state = createEmptyState("white");
+
+  placePiece(state, 4, 4, "white", "horse");
+
+  const moves = getLegalMoves(state, 4, 4).map((square) => toAlgebraic(square)).sort();
+
+  assert.deepEqual(moves, ["c3", "c5", "c7", "d4", "d5", "d6", "e3", "e4", "e6", "e7", "f4", "f5", "f6", "g3", "g5", "g7"]);
+})();
+
+(function testHorseRequiresEmptyIntermediateSquare() {
+  const state = createEmptyState("white");
+
+  placePiece(state, 4, 4, "white", "horse");
+  placePiece(state, 3, 4, "black", "pawn", "blocker");
+
+  const moves = getLegalMoves(state, 4, 4);
+
+  assert.ok(!moves.some((move) => move.row === 2 && move.col === 4));
+  assert.ok(moves.some((move) => move.row === 3 && move.col === 4 && move.capture));
 })();
 
 (function testTeacherTransformChangesTypeWithoutMovingTeacher() {

@@ -3,8 +3,9 @@
 ## Overview
 
 Kingstep is a two-player abstract strategy game played on a 9x8 board.
-Each side has two commanders, two sentinels, one teacher, and eleven pawns.
-All pieces move one square in any direction.
+Each side has two commanders, two sentinels, one teacher, two horses, and nine pawns.
+Most pieces move one square in any direction.
+Horses move one or two squares in a straight line.
 Commanders no longer move two squares; instead, each commander grants a local aura:
 any friendly pawn adjacent to that commander can hop over a friendly adjacent piece.
 Teachers can transform friendly pieces into other non-Teacher piece types.
@@ -19,14 +20,16 @@ through one full opponent turn.
 - 2 town squares at c5 and f5
 - 16 white pieces:
   - 2 commanders
+  - 2 horses
   - 2 sentinels
   - 1 teacher
-  - 11 pawns
+  - 9 pawns
 - 16 black pieces:
   - 2 commanders
+  - 2 horses
   - 2 sentinels
   - 1 teacher
-  - 11 pawns
+  - 9 pawns
 
 ## Objective
 
@@ -40,10 +43,10 @@ Win by either:
 1. Place the board between both players.
 2. Mark c5 and f5 as town squares.
 3. White setup:
-  - Back rank (rank 9): pawn, sentinel, commander, teacher, pawn, commander, sentinel, pawn
+  - Back rank (rank 9): horse, sentinel, commander, teacher, pawn, commander, sentinel, horse
   - Front rank (rank 8): eight pawns
 4. Black setup:
-  - Back rank (rank 1): pawn, sentinel, commander, pawn, teacher, commander, sentinel, pawn
+  - Back rank (rank 1): horse, sentinel, commander, pawn, teacher, commander, sentinel, horse
   - Front rank (rank 2): eight pawns
 5. White takes the first turn.
 
@@ -61,6 +64,8 @@ There are no bonus actions.
 ## Actions and Move Rules
 
 - All pieces may move exactly one square to any adjacent square, including diagonals.
+- Horses move one or two squares in one straight direction (orthogonal or diagonal).
+- For a two-square horse move, the intermediate square must be empty.
 - You may move into empty squares or capture by moving onto an enemy square.
 - You may not move off-board.
 - You may not move onto a square occupied by a friendly piece.
@@ -70,7 +75,7 @@ Teacher transformation rule:
 - A teacher may use its action to transform one friendly non-Teacher piece instead of moving.
 - The transformed piece must be within range 1 of the teacher (an adjacent square, including diagonals).
 - The chosen friendly piece keeps its square and is changed into exactly one of:
-  commander, pawn, or sentinel.
+  commander, horse, pawn, or sentinel.
 - The chosen type cannot be teacher.
 - The transformed piece cannot stay the same type it already was.
 - The teacher does not move when performing a transformation.
@@ -101,6 +106,7 @@ Sentinel shield rule:
 - There is no promotion.
 - There is no en passant.
 - No piece has a forward-only rule; movement is fully adjacent in all directions.
+- Horses are the only pieces that may move two squares in a straight line.
 - A pawn can have both normal one-step moves and commander-aura hop moves in the same turn.
 - A pawn only needs to be adjacent to one friendly commander to gain hop moves.
 - A teacher can only transform adjacent friendly non-Teacher pieces (range 1).
@@ -163,6 +169,12 @@ but it may move to d6 or capture on e5 because those squares remain inside the s
 White teacher on d9 chooses the adjacent friendly pawn on e8 and transforms it into a sentinel.
 The teacher remains on d9, the chosen pawn's square stays e8, and the turn ends normally.
 
+### Example 8: Horse move
+
+White horse on a9 may move to a8, b9, or b8 as one-step straight moves.
+It may also move to a7, c9, or c7 if the intermediate square on that line is empty
+and the destination is not occupied by a white piece.
+
 ## Revision Notes
 
 - Removed commander two-space movement.
@@ -175,3 +187,5 @@ The teacher remains on d9, the chosen pawn's square stays e8, and the turn ends 
 - Added teacher piece: starts on d-file for White and e-file for Black.
 - Added teacher transformation action for friendly non-Teacher pieces.
 - Changed teacher transformation range to 1 (adjacent squares only).
+- Added horse piece on files a/h for both players.
+- Added horse movement: one or two squares in a straight line; two-square moves require an empty intermediate square.
