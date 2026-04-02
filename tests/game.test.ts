@@ -198,6 +198,25 @@ function placePiece(
   assert.deepEqual(actualEmptyStops, expectedEmptyStops);
 })();
 
+(function testPawnCanCaptureWhenMatchingColorTileIsBeyondEnemy(): void {
+  const state = createEmptyState("white");
+
+  placePiece(state, 4, 3, "white", "pawn", "slider");
+  placePiece(state, 3, 3, "black", "pawn", "target");
+
+  const startColor = getTileColor(state, 4, 3)!;
+  const nonMatchingColor = startColor === "blue" ? "green" : "blue";
+
+  // Enemy tile does not match start color.
+  state.tileColors["3,3"] = nonMatchingColor;
+  // But a later tile on the same ray does match, so capture should be legal.
+  state.tileColors["2,3"] = startColor;
+
+  const moves = getLegalMoves(state, 4, 3);
+
+  assert.ok(moves.some((move) => move.row === 3 && move.col === 3 && move.capture));
+})();
+
 (function testHorseMovesOneOrTwoSquaresStraight(): void {
   const state = createEmptyState("white");
 

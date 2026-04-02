@@ -811,9 +811,8 @@ function isCaptureAllowedByTileColor(
 
   let r = fromRow + stepRow;
   let c = fromCol + stepCol;
-  while (true) {
+  while (isEnterableSquare(r, c)) {
     if (getTileColor(state, r, c) === startColor) return true;
-    if (r === toRow && c === toCol) break;
     r += stepRow;
     c += stepCol;
   }
@@ -844,7 +843,7 @@ function getPawnSlidingMoves(
           // Friendly piece: blocked
           break;
         }
-        // Enemy piece: can only capture if a same-color tile is on or before the target
+        // Enemy piece: capture allowed if any same-color tile exists on this forward ray
         if (isCaptureAllowedByTileColor(state, row, col, nextRow, nextCol, step.row, step.col)) {
           moves.push({ row: nextRow, col: nextCol, capture: true });
         }

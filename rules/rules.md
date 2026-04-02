@@ -67,7 +67,7 @@ Global rules:
 - You may not move onto the center tile (e5). No piece may enter or be placed on it.
 - You may not move onto a square occupied by a friendly piece.
 - Captures happen on the 1st move only, by moving onto an enemy-occupied square.
-- **Capture tile-color rule:** a capture is legal only if there is a tile of the same color as the capturing piece's starting tile somewhere along the movement path from the capturing piece to the target (inclusive of the target tile). If no such same-color tile exists along the path, the capture is not allowed.
+- **Capture tile-color rule:** a capture is legal only if there is a tile of the same color as the capturing piece's starting tile on the capture line in the movement direction (this may be before the target, on the target, or beyond the target). If no such same-color tile exists on that line, the capture is not allowed.
 - Placement never captures and is only available on the 1st move.
 - Pieces may not be placed on town squares or on the center tile.
 - The 2nd move cannot capture; it can only move to empty squares or push enemy pieces.
@@ -117,7 +117,7 @@ Pawn sliding rule (1st move):
 
 - On the 1st move of a turn, a pawn may slide any number of squares in a single direction.
 - The pawn must stop on a tile whose **color matches the pawn's starting tile color**.
-- If the pawn encounters an enemy piece, a capture is only allowed if the capture tile-color rule is satisfied: there must be a tile matching the pawn's starting tile color somewhere along the slide path (from the first tile after the pawn to the enemy's tile, inclusive). If the rule is not satisfied, the pawn is still blocked and cannot slide further, but no capture occurs.
+- If the pawn encounters an enemy piece, a capture is only allowed if the capture tile-color rule is satisfied: there must be a tile matching the pawn's starting tile color on that same slide line (before the enemy, on the enemy tile, or beyond the enemy). If the rule is not satisfied, the pawn is still blocked and cannot slide further, but no capture occurs.
 - If a friendly piece blocks the path, the pawn may not pass through it.
 - If no valid stopping tile exists in a given direction, the pawn may not move in that direction.
 - A pawn that starts on the center tile (normally impossible in play) cannot slide in any direction.
