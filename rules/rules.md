@@ -67,6 +67,7 @@ Global rules:
 - You may not move onto the center tile (e5). No piece may enter or be placed on it.
 - You may not move onto a square occupied by a friendly piece.
 - Captures happen on the 1st move only, by moving onto an enemy-occupied square.
+- **Capture tile-color rule:** a capture is legal only if there is a tile of the same color as the capturing piece's starting tile somewhere along the movement path from the capturing piece to the target (inclusive of the target tile). If no such same-color tile exists along the path, the capture is not allowed.
 - Placement never captures and is only available on the 1st move.
 - Pieces may not be placed on town squares or on the center tile.
 - The 2nd move cannot capture; it can only move to empty squares or push enemy pieces.
@@ -116,10 +117,10 @@ Pawn sliding rule (1st move):
 
 - On the 1st move of a turn, a pawn may slide any number of squares in a single direction.
 - The pawn must stop on a tile whose **color matches the pawn's starting tile color**.
-- Exception: if the pawn encounters an enemy piece, it may stop on that tile (capturing the piece) regardless of tile color. The pawn cannot slide through enemy pieces.
+- If the pawn encounters an enemy piece, a capture is only allowed if the capture tile-color rule is satisfied: there must be a tile matching the pawn's starting tile color somewhere along the slide path (from the first tile after the pawn to the enemy's tile, inclusive). If the rule is not satisfied, the pawn is still blocked and cannot slide further, but no capture occurs.
 - If a friendly piece blocks the path, the pawn may not pass through it.
 - If no valid stopping tile exists in a given direction, the pawn may not move in that direction.
-- A pawn that starts on the center tile (normally impossible in play) may only stop at enemy pieces.
+- A pawn that starts on the center tile (normally impossible in play) cannot slide in any direction.
 
 Pawn 2nd move rule:
 
@@ -132,7 +133,7 @@ Pawn 2nd move rule:
 - Town squares are not legal placement squares.
 - The center tile (e5) is impassable. No piece may move onto it or be placed on it.
 - No tile color applies to the center tile; it is always white and cannot be used as a starting or stopping tile for pawn slides.
-- The tile color rule only applies to empty stopping tiles for pawn slides; capturing an enemy piece always ends the slide regardless of tile color.
+- The capture tile-color rule applies to all captures on the 1st move: single-step, horse, pawn slide, and commander aura hops.
 - There is no check or checkmate.
 - There is no castling.
 - There is no promotion.
@@ -217,4 +218,4 @@ If no blue tile (or enemy piece) is reachable in a given direction, the pawn may
 - Updated teacher movement rules: teachers cannot capture pieces by movement.
 - Added tile colors: every playable tile has one of 4 colors (green, blue, yellow, brown), 15 tiles each.
 - Added center tile rule: e5 is white and impassable — no piece may enter or be placed on it.
-- Changed pawn movement on 1st move to sliding: pawns slide in a straight line and must stop on a tile of the same color as their starting tile, or capture the first enemy piece encountered. The tile color rule does not apply on the 2nd move; pawns move exactly one step.
+- Added capture tile-color rule: on the 1st move, a piece can only capture an enemy if there is a tile of the same color as the capturing piece's starting tile along the movement path to the target (inclusive). This applies to all capture types: single-step, horse, pawn slide, and commander aura hops.

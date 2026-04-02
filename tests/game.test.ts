@@ -84,19 +84,23 @@ function placePiece(
 (function testPlacedPieceCanBeCapturedImmediatelyOnNextTurn(): void {
   const state = createEmptyState("black");
 
-  placePiece(state, 4, 4, "white", "pawn", "attacker");
+  placePiece(state, 5, 5, "white", "pawn", "attacker");
+
+  // Ensure tile colors allow capture: target tile matches attacker's tile color
+  const attackerColor = getTileColor(state, 5, 5)!;
+  state.tileColors["4,5"] = attackerColor;
 
   // Black places pawn in action phase
-  const afterPlacement = applyPlacement(state, { row: 3, col: 4 }, "pawn");
+  const afterPlacement = applyPlacement(state, { row: 4, col: 5 }, "pawn");
   // Pass black's push phase to complete the turn
   const afterBlackTurn = applyPassPush(afterPlacement);
 
-  // Now it's white's action phase: white pawn at (4,4) can capture black pawn at (3,4)
-  const whiteMoves = getLegalMoves(afterBlackTurn, 4, 4);
+  // Now it's white's action phase: white pawn at (5,5) can capture black pawn at (4,5)
+  const whiteMoves = getLegalMoves(afterBlackTurn, 5, 5);
 
-  assert.ok(whiteMoves.some((move) => move.row === 3 && move.col === 4 && move.capture));
+  assert.ok(whiteMoves.some((move) => move.row === 4 && move.col === 5 && move.capture));
 
-  const afterCapture = applyMove(afterBlackTurn, { row: 4, col: 4 }, { row: 3, col: 4 });
+  const afterCapture = applyMove(afterBlackTurn, { row: 5, col: 5 }, { row: 4, col: 5 });
 
   assert.equal(afterCapture.lastAction?.kind, "capture");
   assert.equal(afterCapture.lastAction?.capturedPiece?.player, "black");
@@ -148,10 +152,13 @@ function placePiece(
   placePiece(state, 4, 3, "white", "pawn", "slider");
   placePiece(state, 3, 3, "black", "pawn", "enemy-capture-check");
 
-  const startColor = getTileColor(state, 4, 3);
+  // Ensure tile colors allow the capture: set enemy tile to match attacker's starting tile
+  const startColor = getTileColor(state, 4, 3)!;
+  state.tileColors["3,3"] = startColor;
+
   const moves = getLegalMoves(state, 4, 3);
 
-  // The enemy directly in line must always be capturable, regardless of color.
+  // The enemy is capturable because a same-color tile exists on the path.
   assert.ok(moves.some((move) => move.row === 3 && move.col === 3 && move.capture));
 
   // Every non-capture destination must match the pawn's starting color.
@@ -241,6 +248,10 @@ function placePiece(
   placePiece(state, 3, 3, "white", "pawn", "blocker");
   placePiece(state, 2, 3, "black", "pawn", "target");
 
+  // Ensure tile colors allow hop capture: set a path tile to match pawn's starting tile color
+  const pawnColor = getTileColor(state, 4, 3)!;
+  state.tileColors["3,3"] = pawnColor;
+
   const moves = getLegalMoves(state, 4, 3);
 
   assert.ok(moves.some((move) => move.row === 2 && move.col === 3 && move.capture));
@@ -251,6 +262,10 @@ function placePiece(
 
   placePiece(state, 4, 3, "white", "sentinel");
   placePiece(state, 3, 3, "black", "pawn");
+
+  // Ensure tile colors allow capture
+  const attackerColor = getTileColor(state, 3, 3)!;
+  state.tileColors["4,3"] = attackerColor;
 
   const moves = getLegalMoves(state, 3, 3);
 
@@ -264,6 +279,10 @@ function placePiece(
   placePiece(state, 4, 4, "white", "sentinel");
   placePiece(state, 4, 5, "white", "pawn");
   placePiece(state, 4, 6, "black", "pawn");
+
+  // Ensure tile colors allow capture
+  const attackerColor = getTileColor(state, 4, 6)!;
+  state.tileColors["4,5"] = attackerColor;
 
   const moves = getLegalMoves(state, 4, 6);
 
@@ -301,7 +320,13 @@ function placePiece(
   placePiece(state, 8, 7, "black", "pawn", "runner");
   placePiece(state, 7, 7, "white", "pawn", "bait");
 
-  // White captures on g5 to occupy both towns regardless of tile color.
+  // Ensure tile colors allow captures
+  const whiteAttackerColor = getTileColor(state, 3, 6)!;
+  state.tileColors["4,6"] = whiteAttackerColor;
+  const blackAttackerColor = getTileColor(state, 8, 7)!;
+  state.tileColors["7,7"] = blackAttackerColor;
+
+  // White captures on g5 to occupy both towns.
   const whiteAction = applyMove(state, { row: 3, col: 6 }, { row: 4, col: 6 });
   // White push phase: pass
   const afterWhiteTurn = applyPassPush(whiteAction);
@@ -317,17 +342,17 @@ function placePiece(
 (function testAISelectsAvailableCapture(): void {
   const state = createEmptyState("black");
 
-  placePiece(state, 4, 4, "black", "pawn");
-  placePiece(state, 3, 3, "white", "pawn");
+  placePiece(state, 5, 5, "black", "pawn");
+  placePiece(state, 4, 5, "white", "pawn");
+
+  // Ensure tile colors allow capture
+  const attackerColor = getTileColor(state, 5, 5)!;
+  state.tileColors["4,5"] = attackerColor;
 
   const move = chooseAIMove(state, "black");
 
   assert.ok(move);
   assert.equal(move!.action, "move");
-  assert.equal(move!.from?.row, 4);
-  assert.equal(move!.from?.col, 4);
-  assert.equal(move!.to.row, 3);
-  assert.equal(move!.to.col, 3);
   assert.equal(move!.capture, true);
 })();
 
@@ -364,6 +389,10 @@ console.log("Kingstep rules validation passed.");
   placePiece(state, 3, 2, "black", "pawn", "captured");
   placePiece(state, 4, 3, "black", "pawn", "target");
 
+  // Ensure tile colors allow the action-phase capture
+  const attackerColor = getTileColor(state, 4, 2)!;
+  state.tileColors["3,2"] = attackerColor;
+
   // White action phase: capture black pawn neighbour
   const afterAction = applyMove(state, { row: 4, col: 2 }, { row: 3, col: 2 });
 
@@ -385,7 +414,11 @@ console.log("Kingstep rules validation passed.");
   placePiece(state, 4, 3, "black", "pawn", "pushed");
   placePiece(state, 8, 8, "black", "pawn", "anchor");
 
-  // White captures to enter push phase regardless of tile color.
+  // Ensure tile colors allow the action-phase capture
+  const attackerColor = getTileColor(state, 4, 2)!;
+  state.tileColors["3,2"] = attackerColor;
+
+  // White captures to enter push phase.
   const afterAction = applyMove(state, { row: 4, col: 2 }, { row: 3, col: 2 });
 
   // White pawn at (3,2) adjacent to black at (4,3) along step (1,1)

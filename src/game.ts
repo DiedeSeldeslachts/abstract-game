@@ -192,6 +192,10 @@ function getSingleStepMovesForPlayer(
         continue;
       }
 
+      if (target && !isCaptureAllowedByTileColor(state, row, col, nextRow, nextCol, step.row, step.col)) {
+        continue;
+      }
+
       moves.push({
         row: nextRow,
         col: nextCol,
@@ -293,6 +297,10 @@ function getCommanderAuraHopMovesForPawn(
         continue;
       }
 
+      if (target && !isCaptureAllowedByTileColor(state, row, col, landingRow, landingCol, step.row, step.col)) {
+        continue;
+      }
+
       moves.push({
         row: landingRow,
         col: landingCol,
@@ -346,7 +354,8 @@ function getHorseMovesForPlayer(
         }
       } else {
         const canCapture = !middlePiece || isCapturablePiece(state, middleRow, middleCol, player);
-        if (canCapture) {
+        const colorAllowed = !middlePiece || isCaptureAllowedByTileColor(state, row, col, middleRow, middleCol, step.row, step.col);
+        if (canCapture && colorAllowed) {
           movesBySquare.set(`${middleRow},${middleCol}`, {
             row: middleRow,
             col: middleCol,
@@ -396,6 +405,10 @@ function getHorseMovesForPlayer(
     } else {
       // Check if landing target is capturable
       if (landingPiece && !isCapturablePiece(state, landingRow, landingCol, player)) {
+        continue;
+      }
+
+      if (landingPiece && !isCaptureAllowedByTileColor(state, row, col, landingRow, landingCol, step.row, step.col)) {
         continue;
       }
 
@@ -784,6 +797,29 @@ export function getTileColor(state: GameState, row: number, col: number): TileCo
   return state.tileColors?.[`${row},${col}`] ?? null;
 }
 
+function isCaptureAllowedByTileColor(
+  state: GameState,
+  fromRow: number,
+  fromCol: number,
+  toRow: number,
+  toCol: number,
+  stepRow: number,
+  stepCol: number
+): boolean {
+  const startColor = getTileColor(state, fromRow, fromCol);
+  if (!startColor || startColor === "white") return false;
+
+  let r = fromRow + stepRow;
+  let c = fromCol + stepCol;
+  while (true) {
+    if (getTileColor(state, r, c) === startColor) return true;
+    if (r === toRow && c === toCol) break;
+    r += stepRow;
+    c += stepCol;
+  }
+  return false;
+}
+
 function getPawnSlidingMoves(
   state: GameState,
   row: number,
@@ -808,8 +844,10 @@ function getPawnSlidingMoves(
           // Friendly piece: blocked
           break;
         }
-        // Enemy piece: capture regardless of tile color, then stop
-        moves.push({ row: nextRow, col: nextCol, capture: true });
+        // Enemy piece: can only capture if a same-color tile is on or before the target
+        if (isCaptureAllowedByTileColor(state, row, col, nextRow, nextCol, step.row, step.col)) {
+          moves.push({ row: nextRow, col: nextCol, capture: true });
+        }
         break;
       }
 
