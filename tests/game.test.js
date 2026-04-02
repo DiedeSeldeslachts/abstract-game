@@ -154,6 +154,17 @@ function placePiece(state, row, col, player, type, suffix = "manual") {
   assert.equal(nextState.lastAction?.kind, "transform");
 })();
 
+(function testTeacherCannotCaptureEnemyPiece() {
+  const state = createEmptyState("white");
+
+  placePiece(state, 4, 4, "white", "teacher");
+  placePiece(state, 4, 5, "black", "pawn", "target");
+
+  const moves = getLegalMoves(state, 4, 4);
+
+  assert.ok(!moves.some((move) => move.row === 4 && move.col === 5));
+})();
+
 (function testAdjacentPawnCanHopOverFriendlyPiece() {
   const state = createEmptyState("white");
 

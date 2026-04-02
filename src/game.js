@@ -351,7 +351,7 @@ function getLegalMovesForPlayer(state, row, col, player) {
   }
 
   if (piece.type === "teacher") {
-    const moves = getSingleStepMovesForPlayer(state, row, col, player);
+    const moves = getSingleStepMovesForPlayer(state, row, col, player).filter((move) => !move.capture);
     // Teacher cannot transform during push phase
     if (state.turnPhase === "push") {
       return moves;

@@ -91,6 +91,7 @@ Piece movement rules:
 
 Teacher transformation rule:
 
+- Teachers may only move to empty adjacent squares; they cannot capture by movement.
 - A teacher may use its move action to transform one adjacent friendly non-Teacher piece instead of moving.
 - The transformed piece stays on its current square.
 - The chosen type must be one of: commander, horse, pawn, sentinel.
@@ -181,3 +182,4 @@ The Black pawn on e5 is pushed to f5. White's pawn occupies e5. No piece is capt
 - Removed sentinel protection rule: pawns adjacent to sentinels are no longer protected from capture.
 - Clarified that newly placed pieces are immediately capturable on the opponent's next turn.
 - Changed turn structure to two sequential moves per turn: 1st move (action: move/capture or place), 2nd move (push: move to empty square or push enemy piece away, no captures). Teacher cannot transform on the 2nd move. The 2nd move is skipped automatically if no legal options exist.
+- Updated teacher movement rules: teachers cannot capture pieces by movement.
