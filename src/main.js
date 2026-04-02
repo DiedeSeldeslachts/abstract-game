@@ -1,9 +1,11 @@
 import {
+  applyPassPush,
   applyPlacement,
   applyMove,
   BOARD_COLS,
   BOARD_ROWS,
   createInitialState,
+  getAllLegalMoves,
   getLegalPlacements,
   getLegalMoves,
   getRemainingReserveCounts,
@@ -89,7 +91,7 @@ function getSquareClasses(row, col) {
   const move = selectedMoves.find((candidate) => candidate.row === row && candidate.col === col);
 
   if (move) {
-    classes.push(move.capture ? "is-capture" : "is-target");
+    classes.push(move.push ? "is-push" : move.capture ? "is-capture" : "is-target");
   }
 
   if (state.lastAction?.from?.row === row && state.lastAction?.from?.col === col) {
@@ -173,13 +175,22 @@ function renderSidebar() {
   } else if (selectedSquare) {
     const piece = state.board[selectedSquare.row][selectedSquare.col];
     const moveCount = selectedMoves.length;
-    selectionTextElement.textContent = `${formatPieceName(piece)} on ${toAlgebraic(selectedSquare)} has ${moveCount} legal ${moveCount === 1 ? "move" : "moves"}.`;
+    const pushCount = selectedMoves.filter((m) => m.push).length;
+    const phaseHint = state.turnPhase === "push" ? ` (${pushCount} push${pushCount === 1 ? "" : "es"}, ${moveCount - pushCount} move${moveCount - pushCount === 1 ? "" : "s"})` : "";
+    selectionTextElement.textContent = `${formatPieceName(piece)} on ${toAlgebraic(selectedSquare)} has ${moveCount} legal ${moveCount === 1 ? "move" : "moves"}${phaseHint}.`;
+  } else if (state.turnPhase === "push") {
+    selectionTextElement.textContent = "2nd move: select a piece to move it or push an enemy piece away. No captures allowed.";
   } else {
     selectionTextElement.textContent = "Choose to move a piece or place one reserve unit, then select a legal target hex.";
   }
 
   if (!state.lastAction) {
     lastActionTextElement.textContent = "No moves yet.";
+    return;
+  }
+
+  if (state.lastAction.kind === "pass") {
+    lastActionTextElement.textContent = `${titleCase(state.lastAction.player)} passed the 2nd move.`;
     return;
   }
 
@@ -192,6 +203,11 @@ function renderSidebar() {
   }
 
   const from = toAlgebraic(state.lastAction.from);
+
+  if (state.lastAction.kind === "push") {
+    lastActionTextElement.textContent = `${pieceName} pushed ${formatPieceName(state.lastAction.pushedPiece)} from ${to} to ${toAlgebraic(state.lastAction.pushTo)}.`;
+    return;
+  }
 
   if (state.lastAction.capturedPiece) {
     lastActionTextElement.textContent = `${pieceName} captured ${formatPieceName(state.lastAction.capturedPiece)} from ${from} to ${to}.`;
@@ -229,6 +245,7 @@ function renderReservePanel() {
       aiThinking ||
       transformChoicePending ||
       state.currentPlayer !== HUMAN_PLAYER ||
+      state.turnPhase === "push" ||
       reserveLeft <= 0;
   }
 }
@@ -263,7 +280,12 @@ function renderStatus() {
     return;
   }
 
-  statusTextElement.textContent = `${titleCase(state.currentPlayer)} to act. On each turn, either move an existing piece or place one reserve piece onto any empty non-town hex. Hold both towns for one full round to win.`;
+  if (state.turnPhase === "push") {
+    statusTextElement.textContent = `${titleCase(state.currentPlayer)}'s 2nd move: move a piece or push an enemy piece away (no captures).`;
+    return;
+  }
+
+  statusTextElement.textContent = `${titleCase(state.currentPlayer)} to act. 1st move: move or capture, or place a reserve piece. 2nd move will follow.`;
 }
 
 function render() {
@@ -344,9 +366,14 @@ function performAIMove() {
   }
 
   const move = chooseAIMove(state, AI_PLAYER);
-  aiThinking = false;
 
   if (!move) {
+    // No legal moves in push phase: pass
+    if (state.turnPhase === "push") {
+      state = applyPassPush(state);
+      clearSelection();
+    }
+    aiThinking = false;
     render();
     return;
   }
@@ -356,6 +383,21 @@ function performAIMove() {
       ? applyPlacement(state, move.to, move.placeType)
       : applyMove(state, move.from, move.to, { transformTo: move.transformTo });
   clearSelection();
+
+  // If still AI's turn (push phase after action), schedule the push move
+  if (!state.winner && state.currentPlayer === AI_PLAYER) {
+    render();
+    if (aiMoveTimer) {
+      window.clearTimeout(aiMoveTimer);
+    }
+    aiMoveTimer = window.setTimeout(() => {
+      aiMoveTimer = null;
+      performAIMove();
+    }, AI_MOVE_DELAY_MS);
+    return;
+  }
+
+  aiThinking = false;
   render();
 }
 
@@ -381,6 +423,19 @@ function scheduleAIMove() {
   }, AI_MOVE_DELAY_MS);
 }
 
+function checkAutoPassPushPhase() {
+  if (state.winner || state.turnPhase !== "push") {
+    return;
+  }
+
+  const moves = getAllLegalMoves(state, state.currentPlayer);
+
+  if (moves.length === 0) {
+    state = applyPassPush(state);
+    clearSelection();
+  }
+}
+
 async function handleSquareClick(event) {
   const square = event.target.closest("button[data-row][data-col]");
 
@@ -392,10 +447,11 @@ async function handleSquareClick(event) {
   const col = Number(square.dataset.col);
   const targetMove = selectedMoves.find((move) => move.row === row && move.col === col);
 
-  if (selectedPlacementType) {
+    if (selectedPlacementType) {
     if (targetMove) {
       state = applyPlacement(state, { row, col }, selectedPlacementType);
       clearSelection();
+      checkAutoPassPushPhase();
       render();
 
       if (!state.winner) {
@@ -421,6 +477,7 @@ async function handleSquareClick(event) {
 
     state = applyMove(state, selectedSquare, { row, col }, { transformTo });
     clearSelection();
+    checkAutoPassPushPhase();
     render();
 
     if (!state.winner) {
@@ -443,7 +500,7 @@ async function handleSquareClick(event) {
 }
 
 function selectPlacementType(pieceType) {
-  if (state.winner || aiThinking || transformChoicePending || state.currentPlayer !== HUMAN_PLAYER) {
+  if (state.winner || aiThinking || transformChoicePending || state.currentPlayer !== HUMAN_PLAYER || state.turnPhase === "push") {
     return;
   }
 

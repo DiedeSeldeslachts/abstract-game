@@ -43,28 +43,37 @@ Win by either:
 
 ## Turn Structure
 
-On your turn, choose exactly one action:
+Each turn consists of two sequential moves performed by the same player:
 
-1. Move action:
-   - Choose one of your on-board pieces.
-   - Move it to a legal destination.
-   - If the destination has an opposing piece, capture it.
-2. Place action:
-   - Choose one piece type from your reserve that still has placements available.
-   - Place that piece on any empty square that is not a town square.
+**1st move (action)** — choose one of:
+1. Move one of your on-board pieces to a legal destination. If the destination has an opposing piece, capture it.
+2. Place one piece type from your reserve on any empty square that is not a town square.
 
-Then end your turn.
+**2nd move (push)** — choose one of:
+1. Move one of your on-board pieces to an empty destination (no captures).
+2. Push an enemy piece away: move one of your pieces onto an enemy-occupied square. The enemy piece is displaced one square further in the same direction of movement. The destination square for the pushed piece must be empty and on the board. If no such square exists, that push is not a legal option.
 
-There are no bonus actions.
+After both moves are completed, the turn ends and the opponent takes their turn.
+
+If a player has no legal moves available during the 2nd move, the 2nd move is skipped automatically.
 
 ## Actions and Move Rules
 
-Global movement and capture rules:
+Global rules:
 
 - You may not move off-board.
 - You may not move onto a square occupied by a friendly piece.
-- Captures happen by moving onto an enemy-occupied square.
-- Placement never captures.
+- Captures happen on the 1st move only, by moving onto an enemy-occupied square.
+- Placement never captures and is only available on the 1st move.
+- The 2nd move cannot capture; it can only move to empty squares or push enemy pieces.
+
+Push rules:
+
+- A push is initiated by moving onto an enemy-occupied square on the 2nd move.
+- The push direction is the direction of your piece's movement.
+- The enemy piece is displaced one square further in that same direction.
+- The displaced position must be empty and on the board. Otherwise the push is not legal.
+- The pushing piece occupies the square previously held by the pushed piece.
 
 Reserve placement limits (per player):
 
@@ -109,9 +118,10 @@ Commanders themselves move one square and do not hop.
 - No piece has a forward-only rule; movement is adjacent in all directions.
 - Horses are the only pieces that can move two squares in a straight line.
 - A pawn only needs one adjacent friendly commander to unlock hop moves.
-- Sentinel shield legality is checked against every enemy sentinel.
-- A piece placed on the previous turn can be captured normally on the next turn; placement grants no capture immunity.
-- If a player has no legal move actions but has at least one legal placement, they can still take a turn by placing.
+- A piece placed on the 1st move can be captured normally by the opponent on their next 1st move; placement grants no capture immunity.
+- If a player has no legal 1st move actions, they may not skip it; but if the board and reserve both yield no valid action, the game is considered stuck (draw by stalemate is not formally defined in the current rules).
+- If a player has no legal 2nd move actions, the 2nd move is skipped.
+- Teacher cannot transform on the 2nd move; it may only move spatially.
 
 ## End of Game
 
@@ -148,12 +158,17 @@ White commander on e5, white pawn on d5, white pawn on d4.
 Because d5 is adjacent to a commander, the pawn on d5 may hop over d4 to d3,
 if d3 is not occupied by a white piece.
 
-### Example 4: Sentinel protection
+### Example 4: Town control and full turn
 
-White occupies both c5 and f5 at the end of White's turn.
+White occupies both c5 and f5 at the end of White's full turn (after both the 1st and 2nd moves).
 White creates pending town control.
-White wins only if both towns are still white-occupied
-when White's next turn begins.
+White wins only if both towns are still white-occupied when White's next full turn begins.
+
+### Example 5: Push on the 2nd move
+
+White pawn on d5, Black pawn on e5, f5 is empty.
+On White's 2nd move, White moves the pawn from d5 toward e5 (one step in the direction of f5).
+The Black pawn on e5 is pushed to f5. White's pawn occupies e5. No piece is captured.
 
 ## Revision Notes
 
@@ -165,3 +180,4 @@ when White's next turn begins.
 - Updated sentinel mechanics: sentinels can now be captured and cannot move.
 - Removed sentinel protection rule: pawns adjacent to sentinels are no longer protected from capture.
 - Clarified that newly placed pieces are immediately capturable on the opponent's next turn.
+- Changed turn structure to two sequential moves per turn: 1st move (action: move/capture or place), 2nd move (push: move to empty square or push enemy piece away, no captures). Teacher cannot transform on the 2nd move. The 2nd move is skipped automatically if no legal options exist.

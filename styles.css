@@ -217,6 +217,7 @@ h1 {
 
 .hex.is-target::after,
 .hex.is-capture::after,
+.hex.is-push::after,
 .hex.is-origin::before,
 .hex.is-destination::before {
   content: "";
@@ -231,6 +232,10 @@ h1 {
 
 .hex.is-capture::after {
   background: color-mix(in srgb, var(--capture) 34%, transparent);
+}
+
+.hex.is-push::after {
+  background: color-mix(in srgb, #e0a030 36%, transparent);
 }
 
 .hex.is-origin::before,
