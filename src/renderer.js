@@ -8,7 +8,9 @@ import {
   getRemainingPieceCounts,
   getRemainingReserveCounts,
   isInsideBoard,
+  isCenterTile,
   isTownSquare,
+  getTileColor,
   playerControlsBothTowns,
   toAlgebraic,
 } from "./game.js";
@@ -157,7 +159,8 @@ function formatPieceName(piece) {
  * @returns {string}
  */
 function getHexClasses(row, col, gameState, uiState) {
-  const classes = ["hex", (row + col) % 2 === 0 ? "light" : "dark"];
+  const tileColor = getTileColor(gameState, row, col) ?? "unknown";
+  const classes = ["hex", `tile-${tileColor}`];
   const { selectedSquare, selectedMoves } = uiState;
 
   if (selectedSquare?.row === row && selectedSquare?.col === col) {
@@ -177,6 +180,10 @@ function getHexClasses(row, col, gameState, uiState) {
   }
   if (isTownSquare(row, col)) {
     classes.push("is-town");
+  }
+
+  if (isCenterTile(row, col)) {
+    classes.push("is-center");
   }
 
   return classes.join(" ");
@@ -205,7 +212,8 @@ function renderBoard(gameState, uiState) {
       hex.setAttribute("role", "gridcell");
 
       const isTown = isTownSquare(row, col);
-      const pieceLabel = piece ? formatPieceName(piece) : `Empty hex${isTown ? " (town)" : ""}`;
+      const isCenter = isCenterTile(row, col);
+      const pieceLabel = piece ? formatPieceName(piece) : `Empty hex${isTown ? " (town)" : ""}${isCenter ? " (impassable)" : ""}`;
       hex.setAttribute("aria-label", `${toAlgebraic({ row, col })}: ${pieceLabel}`);
 
       if (piece) {
@@ -217,6 +225,11 @@ function renderBoard(gameState, uiState) {
         const marker = document.createElement("span");
         marker.className = "town-marker";
         marker.textContent = "⛩";
+        hex.append(marker);
+      } else if (isCenter) {
+        const marker = document.createElement("span");
+        marker.className = "center-marker";
+        marker.textContent = "✦";
         hex.append(marker);
       }
 

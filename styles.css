@@ -202,13 +202,32 @@ h1 {
   filter: brightness(1.04);
 }
 
-.hex.light {
-  background: var(--light-square);
+.hex.tile-green {
+  background: #5a7a4a;
+  color: #f5f0e8;
 }
 
-.hex.dark {
-  background: var(--dark-square);
-  color: #fff5de;
+.hex.tile-blue {
+  background: #3d6b8e;
+  color: #f5f0e8;
+}
+
+.hex.tile-yellow {
+  background: #c8a84b;
+  color: #201718;
+}
+
+.hex.tile-brown {
+  background: #8e5a38;
+  color: #f5f0e8;
+}
+
+.hex.tile-white,
+.hex.is-center {
+  background: #f0ece0;
+  color: #201718;
+  cursor: default;
+  pointer-events: none;
 }
 
 .hex.is-selected {
@@ -303,11 +322,8 @@ h1 {
 }
 
 .hex.is-town {
-  background: color-mix(in srgb, var(--light-square) 70%, rgba(255, 214, 111, 0.4)) !important;
-}
-
-.hex.is-town.dark {
-  background: color-mix(in srgb, var(--dark-square) 85%, rgba(255, 214, 111, 0.3)) !important;
+  background: color-mix(in srgb, #d4b84a 60%, rgba(255, 214, 111, 0.5)) !important;
+  color: #201718;
 }
 
 .town-marker {
@@ -316,6 +332,15 @@ h1 {
   display: inline-block;
   font-size: 0.75em;
   opacity: 0.6;
+}
+
+.center-marker {
+  position: relative;
+  z-index: 0;
+  display: inline-block;
+  font-size: 0.7em;
+  opacity: 0.4;
+  color: #8a7a60;
 }
 
 .sidebar {

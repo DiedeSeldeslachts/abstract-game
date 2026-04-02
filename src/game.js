@@ -5,8 +5,9 @@ export const HEX_RADIUS = 4;
 const FILES = ["a", "b", "c", "d", "e", "f", "g", "h", "i"];
 export const TOWN_POSITIONS = [
   { row: 4, col: 2 }, // c5
-  { row: 4, col: 5 }  // f5
+  { row: 4, col: 6 }  // g5
 ];
+export const CENTER_POSITION = { row: HEX_RADIUS, col: HEX_RADIUS }; // e5
 const UNIT_TYPES = ["commander", "horse", "pawn", "sentinel", "teacher"];
 const PLACEABLE_TYPES = ["pawn", "horse", "sentinel", "teacher"];
 export const PLACEMENT_LIMITS = {
@@ -99,7 +100,7 @@ function getSingleStepMovesForPlayer(state, row, col, player) {
     const nextRow = row + step.row;
     const nextCol = col + step.col;
 
-    if (!isInsideBoard(nextRow, nextCol)) {
+    if (!isEnterableSquare(nextRow, nextCol)) {
       continue;
     }
 
@@ -116,7 +117,7 @@ function getSingleStepMovesForPlayer(state, row, col, player) {
         // Enemy: legal only if the square behind is empty and on-board
         const pushRow = nextRow + step.row;
         const pushCol = nextCol + step.col;
-        if (isInsideBoard(pushRow, pushCol) && !state.board[pushRow][pushCol]) {
+        if (isEnterableSquare(pushRow, pushCol) && !state.board[pushRow][pushCol]) {
           moves.push({ row: nextRow, col: nextCol, capture: false, push: true, pushTo: { row: pushRow, col: pushCol } });
         }
       }
@@ -181,7 +182,7 @@ function getCommanderAuraHopMovesForPawn(state, row, col, player) {
     const landingRow = blockerRow + step.row;
     const landingCol = blockerCol + step.col;
 
-    if (!isInsideBoard(landingRow, landingCol)) {
+    if (!isEnterableSquare(landingRow, landingCol)) {
       continue;
     }
 
@@ -197,7 +198,7 @@ function getCommanderAuraHopMovesForPawn(state, row, col, player) {
       } else {
         const pushRow = landingRow + step.row;
         const pushCol = landingCol + step.col;
-        if (isInsideBoard(pushRow, pushCol) && !state.board[pushRow][pushCol]) {
+        if (isEnterableSquare(pushRow, pushCol) && !state.board[pushRow][pushCol]) {
           moves.push({ row: landingRow, col: landingCol, capture: false, push: true, pushTo: { row: pushRow, col: pushCol } });
         }
       }
@@ -226,7 +227,7 @@ function getHorseMovesForPlayer(state, row, col, player) {
     const middleRow = row + step.row;
     const middleCol = col + step.col;
 
-    if (!isInsideBoard(middleRow, middleCol)) {
+    if (!isEnterableSquare(middleRow, middleCol)) {
       continue;
     }
 
@@ -239,7 +240,7 @@ function getHorseMovesForPlayer(state, row, col, player) {
         } else {
           const pushRow = middleRow + step.row;
           const pushCol = middleCol + step.col;
-          if (isInsideBoard(pushRow, pushCol) && !state.board[pushRow][pushCol]) {
+          if (isEnterableSquare(pushRow, pushCol) && !state.board[pushRow][pushCol]) {
             movesBySquare.set(`${middleRow},${middleCol}`, { row: middleRow, col: middleCol, capture: false, push: true, pushTo: { row: pushRow, col: pushCol } });
           }
         }
@@ -262,7 +263,7 @@ function getHorseMovesForPlayer(state, row, col, player) {
     const landingRow = middleRow + step.row;
     const landingCol = middleCol + step.col;
 
-    if (!isInsideBoard(landingRow, landingCol)) {
+    if (!isEnterableSquare(landingRow, landingCol)) {
       continue;
     }
 
@@ -278,7 +279,7 @@ function getHorseMovesForPlayer(state, row, col, player) {
       } else {
         const pushRow = landingRow + step.row;
         const pushCol = landingCol + step.col;
-        if (isInsideBoard(pushRow, pushCol) && !state.board[pushRow][pushCol]) {
+        if (isEnterableSquare(pushRow, pushCol) && !state.board[pushRow][pushCol]) {
           movesBySquare.set(`${landingRow},${landingCol}`, { row: landingRow, col: landingCol, capture: false, push: true, pushTo: { row: pushRow, col: pushCol } });
         }
       }
@@ -369,8 +370,16 @@ function getLegalMovesForPlayer(state, row, col, player) {
 
   const movesBySquare = new Map();
 
-  for (const move of getSingleStepMovesForPlayer(state, row, col, player)) {
-    movesBySquare.set(`${move.row},${move.col}`, move);
+  if (state.turnPhase === "push") {
+    // Push phase: 1 step only, no color restriction
+    for (const move of getSingleStepMovesForPlayer(state, row, col, player)) {
+      movesBySquare.set(`${move.row},${move.col}`, move);
+    }
+  } else {
+    // Action phase: slide any distance, stop only on same-color tile or first enemy
+    for (const move of getPawnSlidingMoves(state, row, col, player)) {
+      movesBySquare.set(`${move.row},${move.col}`, move);
+    }
   }
 
   for (const move of getCommanderAuraHopMovesForPawn(state, row, col, player)) {
@@ -383,6 +392,7 @@ function getLegalMovesForPlayer(state, row, col, player) {
 export function createEmptyState(currentPlayer = "white") {
   return {
     board: createEmptyBoard(),
+    tileColors: createRandomTileColors(),
     currentPlayer,
     winner: null,
     moveNumber: 1,
@@ -455,7 +465,7 @@ export function getLegalPlacements(state, player = state.currentPlayer) {
         continue;
       }
 
-      if (state.board[row][col] || isTownSquare(row, col)) {
+      if (state.board[row][col] || isTownSquare(row, col) || isCenterTile(row, col)) {
         continue;
       }
 
@@ -562,6 +572,95 @@ export function playerControlsBothTowns(state, player) {
 
 export function isTownSquare(row, col) {
   return TOWN_POSITIONS.some((town) => town.row === row && town.col === col);
+}
+
+export function isCenterTile(row, col) {
+  return row === HEX_RADIUS && col === HEX_RADIUS;
+}
+
+function isEnterableSquare(row, col) {
+  return isInsideBoard(row, col) && !isCenterTile(row, col);
+}
+
+const TILE_COLOR_NAMES = ["green", "blue", "yellow", "brown"];
+function shuffleInPlace(values) {
+  for (let index = values.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    const temp = values[index];
+    values[index] = values[swapIndex];
+    values[swapIndex] = temp;
+  }
+}
+
+function createRandomTileColors() {
+  const positions = [];
+
+  for (let row = 0; row < BOARD_ROWS; row += 1) {
+    for (let col = 0; col < BOARD_COLS; col += 1) {
+      if (!isInsideBoard(row, col) || isCenterTile(row, col)) {
+        continue;
+      }
+
+      positions.push({ row, col });
+    }
+  }
+
+  const colors = [];
+  for (const color of TILE_COLOR_NAMES) {
+    for (let count = 0; count < positions.length / TILE_COLOR_NAMES.length; count += 1) {
+      colors.push(color);
+    }
+  }
+
+  shuffleInPlace(colors);
+
+  const tileColors = {};
+  for (let index = 0; index < positions.length; index += 1) {
+    const { row, col } = positions[index];
+    tileColors[`${row},${col}`] = colors[index];
+  }
+
+  return tileColors;
+}
+
+export function getTileColor(state, row, col) {
+  if (isCenterTile(row, col)) return "white";
+  return state.tileColors?.[`${row},${col}`] ?? null;
+}
+
+function getPawnSlidingMoves(state, row, col, player) {
+  const moves = [];
+  const startColor = getTileColor(state, row, col);
+
+  for (const step of ADJACENT_STEPS) {
+    let dist = 1;
+    while (true) {
+      const nextRow = row + dist * step.row;
+      const nextCol = col + dist * step.col;
+
+      if (!isEnterableSquare(nextRow, nextCol)) break;
+
+      const target = state.board[nextRow][nextCol];
+
+      if (target) {
+        if (target.player === player) {
+          // Friendly piece: blocked
+          break;
+        }
+        // Enemy piece: capture regardless of tile color, then stop
+        moves.push({ row: nextRow, col: nextCol, capture: true });
+        break;
+      }
+
+      // Empty tile: can stop only if same color as starting tile
+      if (getTileColor(state, nextRow, nextCol) === startColor) {
+        moves.push({ row: nextRow, col: nextCol, capture: false });
+      }
+      dist++;
+    }
+  }
+
+  return moves;
 }
 
 function createNextStateBase(state) {
@@ -724,6 +823,10 @@ export function applyPlacement(state, to, pieceType) {
 
   if (isTownSquare(to.row, to.col)) {
     throw new Error("You cannot place directly on a town square.");
+  }
+
+  if (isCenterTile(to.row, to.col)) {
+    throw new Error("You cannot place on the center tile.");
   }
 
   if (state.board[to.row][to.col]) {

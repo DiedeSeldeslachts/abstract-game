@@ -6,15 +6,26 @@ import {
   applyPlacement,
   createEmptyState,
   createInitialState,
+  isInsideBoard,
   getLegalMoves,
   getLegalPlacements,
   getPiece,
   getRemainingPieceCounts,
   getRemainingReserveCounts,
+  getTileColor,
   playerControlsBothTowns,
   toAlgebraic
 } from "../src/game.js";
 import { chooseAIMove } from "../src/ai.js";
+
+const ADJACENT_STEPS = [
+  { row: 0, col: 1 },
+  { row: 0, col: -1 },
+  { row: -1, col: 0 },
+  { row: 1, col: 0 },
+  { row: -1, col: -1 },
+  { row: 1, col: 1 }
+];
 
 function placePiece(state, row, col, player, type, suffix = "manual") {
   state.board[row][col] = {
@@ -33,8 +44,8 @@ function placePiece(state, row, col, player, type, suffix = "manual") {
   assert.equal(state.currentPlayer, "white");
   assert.equal(getPiece(state, 4, 2)?.type, "pawn");
   assert.equal(getPiece(state, 4, 2)?.player, "white");
-  assert.equal(getPiece(state, 4, 5)?.type, "pawn");
-  assert.equal(getPiece(state, 4, 5)?.player, "black");
+  assert.equal(getPiece(state, 4, 6)?.type, "pawn");
+  assert.equal(getPiece(state, 4, 6)?.player, "black");
 })();
 
 (function testLegalPlacementsExcludeTownsAndOccupiedSquares() {
@@ -43,7 +54,7 @@ function placePiece(state, row, col, player, type, suffix = "manual") {
 
   assert.ok(placements.length > 0);
   assert.ok(!placements.some((placement) => placement.to.row === 4 && placement.to.col === 2));
-  assert.ok(!placements.some((placement) => placement.to.row === 4 && placement.to.col === 5));
+  assert.ok(!placements.some((placement) => placement.to.row === 4 && placement.to.col === 6));
 })();
 
 (function testApplyPlacementAdvancesToPushPhase() {
@@ -112,17 +123,54 @@ function placePiece(state, row, col, player, type, suffix = "manual") {
   const whiteReserve = getRemainingReserveCounts(state, "white");
   assert.equal(whiteReserve.pawn, 0);
 
-  assert.throws(() => applyPlacement(state, { row: 4, col: 4 }, "pawn"), /remaining pawn placements/i);
+  assert.throws(() => applyPlacement(state, { row: 2, col: 4 }, "pawn"), /remaining pawn placements/i);
 })();
 
-(function testUniversalAdjacentMovementStillApplies() {
+(function testPawnSlidesAndStopsOnSameColorTile() {
   const state = createEmptyState("white");
 
-  placePiece(state, 4, 4, "white", "pawn", "mover");
+  placePiece(state, 4, 3, "white", "pawn", "slider");
+  placePiece(state, 3, 3, "black", "pawn", "enemy-capture-check");
 
-  const moves = getLegalMoves(state, 4, 4).map((square) => toAlgebraic(square)).sort();
+  const startColor = getTileColor(state, 4, 3);
+  const moves = getLegalMoves(state, 4, 3);
 
-  assert.deepEqual(moves, ["d5", "d6", "e4", "e6", "f4", "f5"]);
+  // The enemy directly in line must always be capturable, regardless of color.
+  assert.ok(moves.some((move) => move.row === 3 && move.col === 3 && move.capture));
+
+  // Every non-capture destination must match the pawn's starting color.
+  for (const move of moves.filter((move) => !move.capture)) {
+    assert.equal(getTileColor(state, move.row, move.col), startColor);
+  }
+
+  // Any same-color tile on an unobstructed ray must be present as a legal destination.
+  const expectedEmptyStops = new Set();
+  for (const step of ADJACENT_STEPS) {
+    let distance = 1;
+    while (true) {
+      const row = 4 + distance * step.row;
+      const col = 3 + distance * step.col;
+
+      if (!isInsideBoard(row, col) || (row === 4 && col === 4)) {
+        break;
+      }
+
+      const piece = getPiece(state, row, col);
+
+      if (piece) {
+        break;
+      }
+
+      if (getTileColor(state, row, col) === startColor) {
+        expectedEmptyStops.add(`${row},${col}`);
+      }
+
+      distance += 1;
+    }
+  }
+
+  const actualEmptyStops = new Set(moves.filter((move) => !move.capture).map((move) => `${move.row},${move.col}`));
+  assert.deepEqual(actualEmptyStops, expectedEmptyStops);
 })();
 
 (function testHorseMovesOneOrTwoSquaresStraight() {
@@ -181,13 +229,13 @@ function placePiece(state, row, col, player, type, suffix = "manual") {
 (function testEnemyCanCaptureSentinel() {
   const state = createEmptyState("black");
 
-  placePiece(state, 4, 4, "white", "sentinel");
-  placePiece(state, 3, 4, "black", "pawn");
+  placePiece(state, 4, 3, "white", "sentinel");
+  placePiece(state, 3, 3, "black", "pawn");
 
-  const moves = getLegalMoves(state, 3, 4);
+  const moves = getLegalMoves(state, 3, 3);
 
-  // Black pawn CAN capture the white sentinel
-  assert.ok(moves.some((move) => move.row === 4 && move.col === 4 && move.capture));
+  // Black pawn slides down into (4,3) capturing the white sentinel
+  assert.ok(moves.some((move) => move.row === 4 && move.col === 3 && move.capture));
 })();
 
 (function testEnemyCanCapturePawnAdjacentToSentinel() {
@@ -218,7 +266,7 @@ function placePiece(state, row, col, player, type, suffix = "manual") {
   const state = createEmptyState("white");
 
   placePiece(state, 4, 2, "white", "pawn", "a");
-  placePiece(state, 4, 5, "white", "pawn", "b");
+  placePiece(state, 4, 6, "white", "pawn", "b");
 
   assert.equal(playerControlsBothTowns(state, "white"), true);
   assert.equal(playerControlsBothTowns(state, "black"), false);
@@ -228,14 +276,16 @@ function placePiece(state, row, col, player, type, suffix = "manual") {
   const state = createEmptyState("white");
 
   placePiece(state, 4, 2, "white", "pawn", "a");
-  placePiece(state, 5, 5, "white", "pawn", "b");
-  placePiece(state, 8, 7, "black", "pawn", "a");
+  placePiece(state, 3, 6, "white", "pawn", "b");
+  placePiece(state, 4, 6, "black", "pawn", "town-guard");
+  placePiece(state, 8, 7, "black", "pawn", "runner");
+  placePiece(state, 7, 7, "white", "pawn", "bait");
 
-  // White action: move pawn to capture f5 (both towns occupied by white)
-  const whiteAction = applyMove(state, { row: 5, col: 5 }, { row: 4, col: 5 });
+  // White captures on g5 to occupy both towns regardless of tile color.
+  const whiteAction = applyMove(state, { row: 3, col: 6 }, { row: 4, col: 6 });
   // White push phase: pass
   const afterWhiteTurn = applyPassPush(whiteAction);
-  // Black action: move pawn away
+  // Black performs any legal action that does not break white's town control.
   const blackAction = applyMove(afterWhiteTurn, { row: 8, col: 7 }, { row: 7, col: 7 });
   // Black push phase: pass (starts white's next turn with both towns)
   const afterBlackTurn = applyPassPush(blackAction);
@@ -282,7 +332,7 @@ function placePiece(state, row, col, player, type, suffix = "manual") {
   assert.ok(move);
   assert.equal(move.action, "place");
   assert.ok(!(move.to.row === 4 && move.to.col === 2));
-  assert.ok(!(move.to.row === 4 && move.to.col === 5));
+  assert.ok(!(move.to.row === 4 && move.to.col === 6));
 })();
 
 console.log("Kingstep rules validation passed.");
@@ -290,18 +340,19 @@ console.log("Kingstep rules validation passed.");
 (function testPushPhaseHasPushMovesAndNoCaptures() {
   const state = createEmptyState("white");
 
-  placePiece(state, 4, 3, "white", "pawn", "mover");
-  placePiece(state, 4, 4, "black", "pawn", "target");
+  placePiece(state, 4, 2, "white", "pawn", "mover");
+  placePiece(state, 3, 2, "black", "pawn", "captured");
+  placePiece(state, 4, 3, "black", "pawn", "target");
 
   // White action phase: capture black pawn neighbour
-  const afterAction = applyMove(state, { row: 4, col: 3 }, { row: 3, col: 3 });
+  const afterAction = applyMove(state, { row: 4, col: 2 }, { row: 3, col: 2 });
 
   assert.equal(afterAction.turnPhase, "push");
   assert.equal(afterAction.currentPlayer, "white");
 
-  // In push phase, white pawn at (3,3) is adjacent to black pawn at (4,4)
-  // Push should be there (to (5,5)), and no capture moves
-  const pushMoves = getLegalMoves(afterAction, 3, 3);
+  // In push phase, white pawn at (3,2) is adjacent to black pawn at (4,3)
+  // Push should be there (to (5,4)), and no capture moves
+  const pushMoves = getLegalMoves(afterAction, 3, 2);
 
   assert.ok(!pushMoves.some((m) => m.capture), "push phase must not have capture moves");
 })();
@@ -309,26 +360,27 @@ console.log("Kingstep rules validation passed.");
 (function testPushMoveDisplacesEnemyPiece() {
   const state = createEmptyState("white");
 
-  placePiece(state, 4, 3, "white", "pawn", "pusher");
-  placePiece(state, 4, 4, "black", "pawn", "pushed");
-  placePiece(state, 8, 7, "black", "pawn", "anchor");
+  placePiece(state, 4, 2, "white", "pawn", "pusher");
+  placePiece(state, 3, 2, "black", "pawn", "captured");
+  placePiece(state, 4, 3, "black", "pawn", "pushed");
+  placePiece(state, 8, 8, "black", "pawn", "anchor");
 
-  // Advance to push phase via a neutral action move first
-  const afterAction = applyMove(state, { row: 4, col: 3 }, { row: 3, col: 3 });
+  // White captures to enter push phase regardless of tile color.
+  const afterAction = applyMove(state, { row: 4, col: 2 }, { row: 3, col: 2 });
 
-  // White pawn at (3,3) adjacent to black at (4,4) along step (1,1)
-  // Push target: (5,5) — must be empty and on-board
-  const pushMoves = getLegalMoves(afterAction, 3, 3);
-  const pushMove = pushMoves.find((m) => m.push && m.row === 4 && m.col === 4);
+  // White pawn at (3,2) adjacent to black at (4,3) along step (1,1)
+  // Push target: (5,4) — must be empty and on-board
+  const pushMoves = getLegalMoves(afterAction, 3, 2);
+  const pushMove = pushMoves.find((m) => m.push && m.row === 4 && m.col === 3);
 
-  assert.ok(pushMove, "push move to (4,4) must exist");
-  assert.deepEqual(pushMove.pushTo, { row: 5, col: 5 });
+  assert.ok(pushMove, "push move to (4,3) must exist");
+  assert.deepEqual(pushMove.pushTo, { row: 5, col: 4 });
 
-  const afterPush = applyMove(afterAction, { row: 3, col: 3 }, { row: 4, col: 4 });
+  const afterPush = applyMove(afterAction, { row: 3, col: 2 }, { row: 4, col: 3 });
 
-  assert.equal(getPiece(afterPush, 4, 4)?.player, "white", "pusher now on (4,4)");
-  assert.equal(getPiece(afterPush, 5, 5)?.player, "black", "pushed piece now on (5,5)");
-  assert.equal(getPiece(afterPush, 3, 3), null, "origin is empty");
+  assert.equal(getPiece(afterPush, 4, 3)?.player, "white", "pusher now on (4,3)");
+  assert.equal(getPiece(afterPush, 5, 4)?.player, "black", "pushed piece now on (5,4)");
+  assert.equal(getPiece(afterPush, 3, 2), null, "origin is empty");
   assert.equal(afterPush.lastAction?.kind, "push");
   assert.equal(afterPush.currentPlayer, "black");  // full turn completed
   assert.equal(afterPush.turnPhase, "action");
