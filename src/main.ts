@@ -1,7 +1,9 @@
-// src/main.js
-// Game controller: manages game state and UI state, handles user input, drives the AI.
-// Delegates all DOM rendering to renderer.js and all game logic to game.js.
+/**
+ * Game controller - wires together game.ts, renderer.ts, and ai.ts.
+ * Manages UI state, event handlers, and turn flow.
+ */
 
+import type { UIState, GameState, Coordinate, PlaceableType, PieceType } from "./types.js";
 import {
   applyMove,
   applyPassPush,
@@ -11,7 +13,7 @@ import {
   getLegalMoves,
   getLegalPlacements,
   getRemainingReserveCounts,
-  PLACEMENT_LIMITS,
+  PLACEMENT_LIMITS
 } from "./game.js";
 import { chooseAIMove } from "./ai.js";
 import {
@@ -20,7 +22,7 @@ import {
   renderGame,
   BOARD_ELEMENT,
   GAME_MODE_SELECT,
-  RESERVE_BUTTONS,
+  RESERVE_BUTTONS
 } from "./renderer.js";
 
 // ---------------------------------------------------------------------------
@@ -36,26 +38,26 @@ const GAME_MODE_VS_PLAYER = "vs-player";
 // State
 // ---------------------------------------------------------------------------
 
-// Game state: immutable snapshot replaced after each action (see game.js)
-let state = createInitialState();
+// Game state: immutable snapshot replaced after each action
+let state: GameState = createInitialState();
 
 // UI state: mutable controller variables tracking interaction state
-let uiState = {
+let uiState: UIState = {
   gameMode: GAME_MODE_VS_AI,
-  selectedSquare: null,         // { row, col } | null
-  selectedMoves: [],            // highlighted legal destinations for selected piece
-  selectedPlacementType: null,  // string | null – piece type chosen for placement
-  aiThinking: false,            // true while AI timer is running
-  transformChoicePending: false, // true while the transform overlay is open
+  selectedSquare: null,
+  selectedMoves: [],
+  selectedPlacementType: null,
+  aiThinking: false,
+  transformChoicePending: false
 };
 
-let aiMoveTimer = null;
+let aiMoveTimer: ReturnType<typeof window.setTimeout> | null = null;
 
 // ---------------------------------------------------------------------------
 // Render
 // ---------------------------------------------------------------------------
 
-function render() {
+function render(): void {
   renderGame(state, uiState);
 }
 
@@ -63,13 +65,13 @@ function render() {
 // Selection helpers
 // ---------------------------------------------------------------------------
 
-function clearSelection() {
+function clearSelection(): void {
   uiState.selectedSquare = null;
   uiState.selectedMoves = [];
   uiState.selectedPlacementType = null;
 }
 
-function isAIControlledPlayer(player) {
+function isAIControlledPlayer(player: string): boolean {
   return uiState.gameMode === GAME_MODE_VS_AI && player === AI_PLAYER;
 }
 
@@ -77,7 +79,7 @@ function isAIControlledPlayer(player) {
 // Auto-pass: if the push phase has no legal moves, pass automatically
 // ---------------------------------------------------------------------------
 
-function checkAutoPassPushPhase() {
+function checkAutoPassPushPhase(): void {
   if (state.winner || state.turnPhase !== "push") return;
   if (getAllLegalMoves(state, state.currentPlayer).length === 0) {
     state = applyPassPush(state);
@@ -89,7 +91,7 @@ function checkAutoPassPushPhase() {
 // AI
 // ---------------------------------------------------------------------------
 
-function performAIMove() {
+function performAIMove(): void {
   if (state.winner || !isAIControlledPlayer(state.currentPlayer)) {
     uiState.aiThinking = false;
     render();
@@ -108,9 +110,10 @@ function performAIMove() {
     return;
   }
 
-  state = move.action === "place"
-    ? applyPlacement(state, move.to, move.placeType)
-    : applyMove(state, move.from, move.to, { transformTo: move.transformTo });
+  state =
+    move.action === "place"
+      ? applyPlacement(state, move.to, move.placeType!)
+      : applyMove(state, move.from!, move.to, { transformTo: move.transformTo });
   clearSelection();
 
   // AI may have a second move (push phase after action phase)
@@ -119,7 +122,7 @@ function performAIMove() {
     aiMoveTimer = window.setTimeout(() => {
       aiMoveTimer = null;
       performAIMove();
-    }, AI_MOVE_DELAY_MS);
+    }, AI_MOVE_DELAY_MS) as any;
     return;
   }
 
@@ -127,7 +130,7 @@ function performAIMove() {
   render();
 }
 
-function scheduleAIMove() {
+function scheduleAIMove(): void {
   if (state.winner || !isAIControlledPlayer(state.currentPlayer)) return;
 
   uiState.aiThinking = true;
@@ -137,15 +140,15 @@ function scheduleAIMove() {
   aiMoveTimer = window.setTimeout(() => {
     aiMoveTimer = null;
     performAIMove();
-  }, AI_MOVE_DELAY_MS);
+  }, AI_MOVE_DELAY_MS) as any;
 }
 
 // ---------------------------------------------------------------------------
 // Event handlers
 // ---------------------------------------------------------------------------
 
-async function handleSquareClick(event) {
-  const hexEl = event.target.closest("button[data-row][data-col]");
+async function handleSquareClick(event: Event): Promise<void> {
+  const hexEl = (event.target as Element).closest("button[data-row][data-col]");
 
   if (
     !hexEl ||
@@ -157,8 +160,8 @@ async function handleSquareClick(event) {
     return;
   }
 
-  const row = Number(hexEl.dataset.row);
-  const col = Number(hexEl.dataset.col);
+  const row = Number((hexEl as HTMLElement).dataset.row);
+  const col = Number((hexEl as HTMLElement).dataset.col);
   const targetMove = uiState.selectedMoves.find((m) => m.row === row && m.col === col);
 
   // Placement mode: click a highlighted hex to place the selected piece type
@@ -175,13 +178,17 @@ async function handleSquareClick(event) {
 
   // Move mode: click a highlighted hex to move the selected piece
   if (uiState.selectedSquare && targetMove) {
-    let transformTo = null;
+    let transformTo: PieceType | null = null;
 
     if (targetMove.transform) {
       const targetPiece = state.board[row][col];
       uiState.transformChoicePending = true;
       render();
-      transformTo = await openTransformOverlay(targetMove.transformOptions ?? [], state.currentPlayer, targetPiece);
+      transformTo = await openTransformOverlay(
+        targetMove.transformOptions ?? [],
+        state.currentPlayer,
+        targetPiece
+      );
       uiState.transformChoicePending = false;
 
       if (!transformTo) {
@@ -209,11 +216,13 @@ async function handleSquareClick(event) {
   render();
 }
 
-function handleReserveButtonClick(event) {
-  const button = event.currentTarget;
-  const pieceType = button.dataset.placeType;
+function handleReserveButtonClick(event: Event): void {
+  const button = event.currentTarget as HTMLElement;
+  const pieceType = button.getAttribute("data-place-type");
 
-  if (!pieceType || !Object.prototype.hasOwnProperty.call(PLACEMENT_LIMITS, pieceType)) return;
+  if (!pieceType || !Object.prototype.hasOwnProperty.call(PLACEMENT_LIMITS, pieceType)) {
+    return;
+  }
 
   if (
     state.winner ||
@@ -225,7 +234,9 @@ function handleReserveButtonClick(event) {
     return;
   }
 
-  const reserveLeft = getRemainingReserveCounts(state, state.currentPlayer)[pieceType];
+  const reserveLeft = getRemainingReserveCounts(state, state.currentPlayer)[
+    pieceType as PlaceableType
+  ];
   if (reserveLeft <= 0) return;
 
   if (uiState.selectedPlacementType === pieceType) {
@@ -234,7 +245,7 @@ function handleReserveButtonClick(event) {
     return;
   }
 
-  uiState.selectedPlacementType = pieceType;
+  uiState.selectedPlacementType = pieceType as PlaceableType;
   uiState.selectedSquare = null;
   uiState.selectedMoves = getLegalPlacements(state, state.currentPlayer)
     .filter((p) => p.placeType === pieceType)
@@ -242,8 +253,8 @@ function handleReserveButtonClick(event) {
   render();
 }
 
-function handleModeChange(event) {
-  const nextMode = event.target.value;
+function handleModeChange(event: Event): void {
+  const nextMode = (event.target as HTMLSelectElement).value;
   if (nextMode !== GAME_MODE_VS_AI && nextMode !== GAME_MODE_VS_PLAYER) return;
 
   if (aiMoveTimer) {
@@ -261,7 +272,7 @@ function handleModeChange(event) {
   scheduleAIMove();
 }
 
-function handleRestartClick() {
+function handleRestartClick(): void {
   if (aiMoveTimer) {
     window.clearTimeout(aiMoveTimer);
     aiMoveTimer = null;
@@ -282,7 +293,7 @@ function handleRestartClick() {
 // ---------------------------------------------------------------------------
 
 BOARD_ELEMENT.addEventListener("click", handleSquareClick);
-document.querySelector("#restart-button").addEventListener("click", handleRestartClick);
+document.querySelector("#restart-button")!.addEventListener("click", handleRestartClick);
 GAME_MODE_SELECT.addEventListener("change", handleModeChange);
 for (const button of RESERVE_BUTTONS) {
   button.addEventListener("click", handleReserveButtonClick);

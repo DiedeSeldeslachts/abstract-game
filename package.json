@@ -3,10 +3,14 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node tests/game.test.js",
-    "serve": "http-server -p 8080 -c-1"
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "test": "npm run build && node dist/tests/game.test.js",
+    "serve": "npm run build && http-server -p 8080 -c-1"
   },
   "devDependencies": {
-    "http-server": "^14.1.1"
+    "@types/node": "^25.5.0",
+    "http-server": "^14.1.1",
+    "typescript": "^5.3.0"
   }
 }

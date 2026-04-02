@@ -1,23 +1,55 @@
+/**
+ * Core game engine and state management - pure logic, no DOM or side effects.
+ * All state transformations are immutable: new state returned for each action.
+ */
+
+import type {
+  Coordinate,
+  GameState,
+  Piece,
+  PieceType,
+  PlaceableType,
+  Player,
+  TileColor,
+  TurnPhase,
+  AxialCoordinate,
+  MoveDestination,
+  PlacementAction,
+  MoveAction,
+  GameAction,
+  LastAction,
+  PieceCounter,
+  PlacementCounter,
+  MoveApplyOptions,
+  AIMove,
+} from "./types.js";
+
 export const BOARD_ROWS = 9;
 export const BOARD_COLS = 9;
 export const HEX_RADIUS = 4;
 
-const FILES = ["a", "b", "c", "d", "e", "f", "g", "h", "i"];
-export const TOWN_POSITIONS = [
+const FILES: readonly string[] = ["a", "b", "c", "d", "e", "f", "g", "h", "i"];
+export const TOWN_POSITIONS: readonly Coordinate[] = [
   { row: 4, col: 2 }, // c5
   { row: 4, col: 6 }  // g5
 ];
-export const CENTER_POSITION = { row: HEX_RADIUS, col: HEX_RADIUS }; // e5
-const UNIT_TYPES = ["commander", "horse", "pawn", "sentinel", "teacher"];
-const PLACEABLE_TYPES = ["pawn", "horse", "sentinel", "teacher"];
-export const PLACEMENT_LIMITS = {
+export const CENTER_POSITION: Coordinate = { row: HEX_RADIUS, col: HEX_RADIUS }; // e5
+const UNIT_TYPES: readonly PieceType[] = ["commander", "horse", "pawn", "sentinel", "teacher"];
+const PLACEABLE_TYPES: readonly PlaceableType[] = ["pawn", "horse", "sentinel", "teacher"];
+export const PLACEMENT_LIMITS: Record<PlaceableType, number> = {
   pawn: 5,
   horse: 2,
   sentinel: 2,
   teacher: 1
 };
-export const TEACHER_TRANSFORM_TARGET_TYPES = ["commander", "horse", "pawn", "sentinel"];
-const ADJACENT_STEPS = [
+export const TEACHER_TRANSFORM_TARGET_TYPES: readonly PieceType[] = [
+  "commander",
+  "horse",
+  "pawn",
+  "sentinel"
+];
+
+const ADJACENT_STEPS: readonly Coordinate[] = [
   { row: 0, col: 1 },
   { row: 0, col: -1 },
   { row: -1, col: 0 },
@@ -26,7 +58,7 @@ const ADJACENT_STEPS = [
   { row: 1, col: 1 }
 ];
 
-function isPlayableHex(q, r) {
+function isPlayableHex(q: number, r: number): boolean {
   return (
     Math.abs(q) <= HEX_RADIUS &&
     Math.abs(r) <= HEX_RADIUS &&
@@ -34,36 +66,53 @@ function isPlayableHex(q, r) {
   );
 }
 
-export function toAxial(square) {
+export function toAxial(square: Coordinate): AxialCoordinate {
   return {
     q: square.col - HEX_RADIUS,
     r: HEX_RADIUS - square.row
   };
 }
 
-function createEmptyBoard() {
-  return Array.from({ length: BOARD_ROWS }, () => Array.from({ length: BOARD_COLS }, () => null));
+function createEmptyBoard(): (Piece | null)[][] {
+  return Array.from({ length: BOARD_ROWS }, () =>
+    Array.from({ length: BOARD_COLS }, () => null)
+  );
 }
 
-function createPlayerPieceCounter() {
-  return Object.fromEntries(UNIT_TYPES.map((type) => [type, 0]));
+function createPlayerPieceCounter(): PieceCounter {
+  const counter: Record<string, number> = {};
+  for (const type of UNIT_TYPES) {
+    counter[type] = 0;
+  }
+  return counter as unknown as PieceCounter;
 }
 
-function createPieceCounters() {
+function createPieceCounters(): Record<Player, PieceCounter> {
   return {
     white: createPlayerPieceCounter(),
     black: createPlayerPieceCounter()
   };
 }
 
-function createPlacementCounters() {
+function createPlacementCounters(): Record<Player, PlacementCounter> {
+  const createCounter = (): PlacementCounter => {
+    const counter: Record<string, number> = {};
+    for (const type of PLACEABLE_TYPES) {
+      counter[type] = 0;
+    }
+    return counter as unknown as PlacementCounter;
+  };
   return {
-    white: Object.fromEntries(PLACEABLE_TYPES.map((type) => [type, 0])),
-    black: Object.fromEntries(PLACEABLE_TYPES.map((type) => [type, 0]))
+    white: createCounter(),
+    black: createCounter()
   };
 }
 
-function makePiece(player, type, counters) {
+function makePiece(
+  player: Player,
+  type: PieceType,
+  counters: Record<Player, PieceCounter>
+): Piece {
   counters[player][type] += 1;
 
   return {
@@ -73,15 +122,20 @@ function makePiece(player, type, counters) {
   };
 }
 
-function getOpponent(player) {
+function getOpponent(player: Player): Player {
   return player === "white" ? "black" : "white";
 }
 
-function cloneBoard(board) {
+function cloneBoard(board: (Piece | null)[][]): (Piece | null)[][] {
   return board.map((row) => row.slice());
 }
 
-function isCapturablePiece(state, row, col, capturePlayer) {
+function isCapturablePiece(
+  state: GameState,
+  row: number,
+  col: number,
+  capturePlayer: Player
+): boolean {
   // All pieces are capturable
   const piece = state.board[row][col];
 
@@ -92,9 +146,14 @@ function isCapturablePiece(state, row, col, capturePlayer) {
   return true;
 }
 
-function getSingleStepMovesForPlayer(state, row, col, player) {
+function getSingleStepMovesForPlayer(
+  state: GameState,
+  row: number,
+  col: number,
+  player: Player
+): MoveDestination[] {
   const isPushPhase = state.turnPhase === "push";
-  const moves = [];
+  const moves: MoveDestination[] = [];
 
   for (const step of ADJACENT_STEPS) {
     const nextRow = row + step.row;
@@ -118,7 +177,13 @@ function getSingleStepMovesForPlayer(state, row, col, player) {
         const pushRow = nextRow + step.row;
         const pushCol = nextCol + step.col;
         if (isEnterableSquare(pushRow, pushCol) && !state.board[pushRow][pushCol]) {
-          moves.push({ row: nextRow, col: nextCol, capture: false, push: true, pushTo: { row: pushRow, col: pushCol } });
+          moves.push({
+            row: nextRow,
+            col: nextCol,
+            capture: false,
+            push: true,
+            pushTo: { row: pushRow, col: pushCol }
+          });
         }
       }
     } else {
@@ -138,7 +203,12 @@ function getSingleStepMovesForPlayer(state, row, col, player) {
   return moves;
 }
 
-function hasAdjacentFriendlyCommander(state, row, col, player) {
+function hasAdjacentFriendlyCommander(
+  state: GameState,
+  row: number,
+  col: number,
+  player: Player
+): boolean {
   for (const step of ADJACENT_STEPS) {
     const commanderRow = row + step.row;
     const commanderCol = col + step.col;
@@ -149,7 +219,11 @@ function hasAdjacentFriendlyCommander(state, row, col, player) {
 
     const adjacentPiece = state.board[commanderRow][commanderCol];
 
-    if (adjacentPiece && adjacentPiece.player === player && adjacentPiece.type === "commander") {
+    if (
+      adjacentPiece &&
+      adjacentPiece.player === player &&
+      adjacentPiece.type === "commander"
+    ) {
       return true;
     }
   }
@@ -157,13 +231,18 @@ function hasAdjacentFriendlyCommander(state, row, col, player) {
   return false;
 }
 
-function getCommanderAuraHopMovesForPawn(state, row, col, player) {
+function getCommanderAuraHopMovesForPawn(
+  state: GameState,
+  row: number,
+  col: number,
+  player: Player
+): MoveDestination[] {
   if (!hasAdjacentFriendlyCommander(state, row, col, player)) {
     return [];
   }
 
   const isPushPhase = state.turnPhase === "push";
-  const moves = [];
+  const moves: MoveDestination[] = [];
 
   for (const step of ADJACENT_STEPS) {
     const blockerRow = row + step.row;
@@ -199,7 +278,13 @@ function getCommanderAuraHopMovesForPawn(state, row, col, player) {
         const pushRow = landingRow + step.row;
         const pushCol = landingCol + step.col;
         if (isEnterableSquare(pushRow, pushCol) && !state.board[pushRow][pushCol]) {
-          moves.push({ row: landingRow, col: landingCol, capture: false, push: true, pushTo: { row: pushRow, col: pushCol } });
+          moves.push({
+            row: landingRow,
+            col: landingCol,
+            capture: false,
+            push: true,
+            pushTo: { row: pushRow, col: pushCol }
+          });
         }
       }
     } else {
@@ -219,9 +304,14 @@ function getCommanderAuraHopMovesForPawn(state, row, col, player) {
   return moves;
 }
 
-function getHorseMovesForPlayer(state, row, col, player) {
+function getHorseMovesForPlayer(
+  state: GameState,
+  row: number,
+  col: number,
+  player: Player
+): MoveDestination[] {
   const isPushPhase = state.turnPhase === "push";
-  const movesBySquare = new Map();
+  const movesBySquare = new Map<string, MoveDestination>();
 
   for (const step of ADJACENT_STEPS) {
     const middleRow = row + step.row;
@@ -236,12 +326,22 @@ function getHorseMovesForPlayer(state, row, col, player) {
     if (!middlePiece || middlePiece.player !== player) {
       if (isPushPhase) {
         if (!middlePiece) {
-          movesBySquare.set(`${middleRow},${middleCol}`, { row: middleRow, col: middleCol, capture: false });
+          movesBySquare.set(`${middleRow},${middleCol}`, {
+            row: middleRow,
+            col: middleCol,
+            capture: false
+          });
         } else {
           const pushRow = middleRow + step.row;
           const pushCol = middleCol + step.col;
           if (isEnterableSquare(pushRow, pushCol) && !state.board[pushRow][pushCol]) {
-            movesBySquare.set(`${middleRow},${middleCol}`, { row: middleRow, col: middleCol, capture: false, push: true, pushTo: { row: pushRow, col: pushCol } });
+            movesBySquare.set(`${middleRow},${middleCol}`, {
+              row: middleRow,
+              col: middleCol,
+              capture: false,
+              push: true,
+              pushTo: { row: pushRow, col: pushCol }
+            });
           }
         }
       } else {
@@ -275,12 +375,22 @@ function getHorseMovesForPlayer(state, row, col, player) {
 
     if (isPushPhase) {
       if (!landingPiece) {
-        movesBySquare.set(`${landingRow},${landingCol}`, { row: landingRow, col: landingCol, capture: false });
+        movesBySquare.set(`${landingRow},${landingCol}`, {
+          row: landingRow,
+          col: landingCol,
+          capture: false
+        });
       } else {
         const pushRow = landingRow + step.row;
         const pushCol = landingCol + step.col;
         if (isEnterableSquare(pushRow, pushCol) && !state.board[pushRow][pushCol]) {
-          movesBySquare.set(`${landingRow},${landingCol}`, { row: landingRow, col: landingCol, capture: false, push: true, pushTo: { row: pushRow, col: pushCol } });
+          movesBySquare.set(`${landingRow},${landingCol}`, {
+            row: landingRow,
+            col: landingCol,
+            capture: false,
+            push: true,
+            pushTo: { row: pushRow, col: pushCol }
+          });
         }
       }
     } else {
@@ -300,8 +410,13 @@ function getHorseMovesForPlayer(state, row, col, player) {
   return Array.from(movesBySquare.values());
 }
 
-function getTeacherTransformTargets(state, row, col, player) {
-  const targets = [];
+function getTeacherTransformTargets(
+  state: GameState,
+  row: number,
+  col: number,
+  player: Player
+): MoveDestination[] {
+  const targets: MoveDestination[] = [];
 
   for (const step of ADJACENT_STEPS) {
     const targetRow = row + step.row;
@@ -317,7 +432,9 @@ function getTeacherTransformTargets(state, row, col, player) {
       continue;
     }
 
-    const transformOptions = TEACHER_TRANSFORM_TARGET_TYPES.filter((type) => type !== piece.type);
+    const transformOptions = TEACHER_TRANSFORM_TARGET_TYPES.filter(
+      (type) => type !== piece.type
+    );
 
     if (transformOptions.length === 0) {
       continue;
@@ -328,14 +445,19 @@ function getTeacherTransformTargets(state, row, col, player) {
       col: targetCol,
       capture: false,
       transform: true,
-      transformOptions
+      transformOptions: transformOptions as PieceType[]
     });
   }
 
   return targets;
 }
 
-function getLegalMovesForPlayer(state, row, col, player) {
+function getLegalMovesForPlayer(
+  state: GameState,
+  row: number,
+  col: number,
+  player: Player
+): MoveDestination[] {
   const piece = getPiece(state, row, col);
 
   if (!piece || piece.player !== player) {
@@ -352,7 +474,9 @@ function getLegalMovesForPlayer(state, row, col, player) {
   }
 
   if (piece.type === "teacher") {
-    const moves = getSingleStepMovesForPlayer(state, row, col, player).filter((move) => !move.capture);
+    const moves = getSingleStepMovesForPlayer(state, row, col, player).filter(
+      (move) => !move.capture
+    );
     // Teacher cannot transform during push phase
     if (state.turnPhase === "push") {
       return moves;
@@ -368,7 +492,7 @@ function getLegalMovesForPlayer(state, row, col, player) {
     return getSingleStepMovesForPlayer(state, row, col, player);
   }
 
-  const movesBySquare = new Map();
+  const movesBySquare = new Map<string, MoveDestination>();
 
   if (state.turnPhase === "push") {
     // Push phase: 1 step only, no color restriction
@@ -389,7 +513,7 @@ function getLegalMovesForPlayer(state, row, col, player) {
   return Array.from(movesBySquare.values());
 }
 
-export function createEmptyState(currentPlayer = "white") {
+export function createEmptyState(currentPlayer: Player = "white"): GameState {
   return {
     board: createEmptyBoard(),
     tileColors: createRandomTileColors(),
@@ -408,16 +532,24 @@ export function createEmptyState(currentPlayer = "white") {
   };
 }
 
-export function createInitialState() {
+export function createInitialState(): GameState {
   const state = createEmptyState("white");
 
-  state.board[TOWN_POSITIONS[0].row][TOWN_POSITIONS[0].col] = makePiece("white", "pawn", state.pieceCounters);
-  state.board[TOWN_POSITIONS[1].row][TOWN_POSITIONS[1].col] = makePiece("black", "pawn", state.pieceCounters);
+  state.board[TOWN_POSITIONS[0].row][TOWN_POSITIONS[0].col] = makePiece(
+    "white",
+    "pawn",
+    state.pieceCounters
+  );
+  state.board[TOWN_POSITIONS[1].row][TOWN_POSITIONS[1].col] = makePiece(
+    "black",
+    "pawn",
+    state.pieceCounters
+  );
 
   return state;
 }
 
-export function getPiece(state, row, col) {
+export function getPiece(state: GameState, row: number, col: number): Piece | null {
   if (!isInsideBoard(row, col)) {
     return null;
   }
@@ -425,7 +557,7 @@ export function getPiece(state, row, col) {
   return state.board[row][col];
 }
 
-export function isInsideBoard(row, col) {
+export function isInsideBoard(row: number, col: number): boolean {
   if (row < 0 || row >= BOARD_ROWS || col < 0 || col >= BOARD_COLS) {
     return false;
   }
@@ -434,7 +566,11 @@ export function isInsideBoard(row, col) {
   return isPlayableHex(square.q, square.r);
 }
 
-export function getLegalMoves(state, row, col) {
+export function getLegalMoves(
+  state: GameState,
+  row: number,
+  col: number
+): MoveDestination[] {
   if (state.winner) {
     return [];
   }
@@ -442,7 +578,10 @@ export function getLegalMoves(state, row, col) {
   return getLegalMovesForPlayer(state, row, col, state.currentPlayer);
 }
 
-export function getRemainingReserveCounts(state, player = state.currentPlayer) {
+export function getRemainingReserveCounts(
+  state: GameState,
+  player: Player = state.currentPlayer
+): Record<PlaceableType, number> {
   return {
     pawn: PLACEMENT_LIMITS.pawn - state.placedPieces[player].pawn,
     horse: PLACEMENT_LIMITS.horse - state.placedPieces[player].horse,
@@ -451,12 +590,15 @@ export function getRemainingReserveCounts(state, player = state.currentPlayer) {
   };
 }
 
-export function getLegalPlacements(state, player = state.currentPlayer) {
+export function getLegalPlacements(
+  state: GameState,
+  player: Player = state.currentPlayer
+): PlacementAction[] {
   if (state.winner || state.turnPhase === "push") {
     return [];
   }
 
-  const placements = [];
+  const placements: PlacementAction[] = [];
   const reserve = getRemainingReserveCounts(state, player);
 
   for (let row = 0; row < BOARD_ROWS; row += 1) {
@@ -465,7 +607,11 @@ export function getLegalPlacements(state, player = state.currentPlayer) {
         continue;
       }
 
-      if (state.board[row][col] || isTownSquare(row, col) || isCenterTile(row, col)) {
+      if (
+        state.board[row][col] ||
+        isTownSquare(row, col) ||
+        isCenterTile(row, col)
+      ) {
         continue;
       }
 
@@ -488,12 +634,15 @@ export function getLegalPlacements(state, player = state.currentPlayer) {
   return placements;
 }
 
-export function getAllLegalMoves(state, player = state.currentPlayer) {
+export function getAllLegalMoves(
+  state: GameState,
+  player: Player = state.currentPlayer
+): GameAction[] {
   if (state.winner) {
     return [];
   }
 
-  const allMoves = [];
+  const allMoves: GameAction[] = [];
 
   for (let row = 0; row < BOARD_ROWS; row += 1) {
     for (let col = 0; col < BOARD_COLS; col += 1) {
@@ -519,7 +668,9 @@ export function getAllLegalMoves(state, player = state.currentPlayer) {
               capture: false,
               piece,
               transform: true,
-              transformTo
+              transformTo,
+              push: false,
+              pushTo: null
             });
           }
 
@@ -533,7 +684,9 @@ export function getAllLegalMoves(state, player = state.currentPlayer) {
           capture: move.capture,
           push: move.push ?? false,
           pushTo: move.pushTo ?? null,
-          piece
+          piece,
+          transform: false,
+          transformTo: null
         });
       }
     }
@@ -546,8 +699,10 @@ export function getAllLegalMoves(state, player = state.currentPlayer) {
   return allMoves;
 }
 
-export function getRemainingPieceCounts(state) {
-  const counts = { white: 0, black: 0 };
+export function getRemainingPieceCounts(
+  state: GameState
+): Record<Player, number> {
+  const counts: Record<Player, number> = { white: 0, black: 0 };
 
   for (const row of state.board) {
     for (const piece of row) {
@@ -560,7 +715,7 @@ export function getRemainingPieceCounts(state) {
   return counts;
 }
 
-export function playerControlsBothTowns(state, player) {
+export function playerControlsBothTowns(state: GameState, player: Player): boolean {
   for (const townPos of TOWN_POSITIONS) {
     const piece = state.board[townPos.row][townPos.col];
     if (!piece || piece.player !== player) {
@@ -570,20 +725,21 @@ export function playerControlsBothTowns(state, player) {
   return true;
 }
 
-export function isTownSquare(row, col) {
+export function isTownSquare(row: number, col: number): boolean {
   return TOWN_POSITIONS.some((town) => town.row === row && town.col === col);
 }
 
-export function isCenterTile(row, col) {
+export function isCenterTile(row: number, col: number): boolean {
   return row === HEX_RADIUS && col === HEX_RADIUS;
 }
 
-function isEnterableSquare(row, col) {
+function isEnterableSquare(row: number, col: number): boolean {
   return isInsideBoard(row, col) && !isCenterTile(row, col);
 }
 
-const TILE_COLOR_NAMES = ["green", "blue", "yellow", "brown"];
-function shuffleInPlace(values) {
+const TILE_COLOR_NAMES: readonly TileColor[] = ["green", "blue", "yellow", "brown"];
+
+function shuffleInPlace<T>(values: T[]): void {
   for (let index = values.length - 1; index > 0; index -= 1) {
     const swapIndex = Math.floor(Math.random() * (index + 1));
     const temp = values[index];
@@ -592,8 +748,8 @@ function shuffleInPlace(values) {
   }
 }
 
-function createRandomTileColors() {
-  const positions = [];
+function createRandomTileColors(): Record<string, TileColor> {
+  const positions: Coordinate[] = [];
 
   for (let row = 0; row < BOARD_ROWS; row += 1) {
     for (let col = 0; col < BOARD_COLS; col += 1) {
@@ -605,7 +761,7 @@ function createRandomTileColors() {
     }
   }
 
-  const colors = [];
+  const colors: TileColor[] = [];
   for (const color of TILE_COLOR_NAMES) {
     for (let count = 0; count < positions.length / TILE_COLOR_NAMES.length; count += 1) {
       colors.push(color);
@@ -614,7 +770,7 @@ function createRandomTileColors() {
 
   shuffleInPlace(colors);
 
-  const tileColors = {};
+  const tileColors: Record<string, TileColor> = {};
   for (let index = 0; index < positions.length; index += 1) {
     const { row, col } = positions[index];
     tileColors[`${row},${col}`] = colors[index];
@@ -623,13 +779,18 @@ function createRandomTileColors() {
   return tileColors;
 }
 
-export function getTileColor(state, row, col) {
+export function getTileColor(state: GameState, row: number, col: number): TileColor | null {
   if (isCenterTile(row, col)) return "white";
   return state.tileColors?.[`${row},${col}`] ?? null;
 }
 
-function getPawnSlidingMoves(state, row, col, player) {
-  const moves = [];
+function getPawnSlidingMoves(
+  state: GameState,
+  row: number,
+  col: number,
+  player: Player
+): MoveDestination[] {
+  const moves: MoveDestination[] = [];
   const startColor = getTileColor(state, row, col);
 
   for (const step of ADJACENT_STEPS) {
@@ -663,7 +824,7 @@ function getPawnSlidingMoves(state, row, col, player) {
   return moves;
 }
 
-function createNextStateBase(state) {
+function createNextStateBase(state: GameState): GameState {
   const isEndOfTurn = state.turnPhase === "push";
   return {
     ...state,
@@ -688,7 +849,11 @@ function createNextStateBase(state) {
   };
 }
 
-function resolveWinConditions(nextState, stateBeforeAction, actingPlayer) {
+function resolveWinConditions(
+  nextState: GameState,
+  stateBeforeAction: GameState,
+  actingPlayer: Player
+): void {
   const remaining = getRemainingPieceCounts(nextState);
   const opponent = getOpponent(actingPlayer);
 
@@ -712,7 +877,12 @@ function resolveWinConditions(nextState, stateBeforeAction, actingPlayer) {
   }
 }
 
-export function applyMove(state, from, to, options = {}) {
+export function applyMove(
+  state: GameState,
+  from: Coordinate,
+  to: Coordinate,
+  options: MoveApplyOptions = {}
+): GameState {
   if (state.winner) {
     throw new Error("The game is already finished.");
   }
@@ -736,7 +906,6 @@ export function applyMove(state, from, to, options = {}) {
 
   const nextState = createNextStateBase(state);
 
-  let capturedPiece = null;
   const transformTo = options.transformTo ?? null;
 
   if (targetMove.transform) {
@@ -746,7 +915,11 @@ export function applyMove(state, from, to, options = {}) {
 
     const targetPiece = nextState.board[to.row][to.col];
 
-    if (!targetPiece || targetPiece.player !== piece.player || targetPiece.type === "teacher") {
+    if (
+      !targetPiece ||
+      targetPiece.player !== piece.player ||
+      targetPiece.type === "teacher"
+    ) {
       throw new Error("Teacher can only transform friendly non-Teacher pieces.");
     }
 
@@ -767,7 +940,11 @@ export function applyMove(state, from, to, options = {}) {
     };
   } else if (targetMove.push) {
     const pushedPiece = nextState.board[to.row][to.col];
-    const pushTo = targetMove.pushTo;
+    const pushTo = targetMove.pushTo!;
+
+    if (!pushedPiece) {
+      throw new Error("Push requires a piece to push.");
+    }
 
     nextState.board[from.row][from.col] = null;
     nextState.board[to.row][to.col] = piece;
@@ -784,7 +961,7 @@ export function applyMove(state, from, to, options = {}) {
       capturedPiece: null
     };
   } else {
-    capturedPiece = nextState.board[to.row][to.col];
+    const capturedPiece = nextState.board[to.row][to.col];
 
     nextState.board[from.row][from.col] = null;
     nextState.board[to.row][to.col] = piece;
@@ -799,7 +976,7 @@ export function applyMove(state, from, to, options = {}) {
       piece,
       from: { ...from },
       to: { ...to },
-      capturedPiece
+      capturedPiece: capturedPiece ?? null
     };
   }
 
@@ -808,7 +985,11 @@ export function applyMove(state, from, to, options = {}) {
   return nextState;
 }
 
-export function applyPlacement(state, to, pieceType) {
+export function applyPlacement(
+  state: GameState,
+  to: Coordinate,
+  pieceType: PlaceableType
+): GameState {
   if (state.winner) {
     throw new Error("The game is already finished.");
   }
@@ -858,11 +1039,11 @@ export function applyPlacement(state, to, pieceType) {
   return nextState;
 }
 
-export function toAlgebraic(square) {
+export function toAlgebraic(square: Coordinate): string {
   return `${FILES[square.col]}${BOARD_ROWS - square.row}`;
 }
 
-export function applyPassPush(state) {
+export function applyPassPush(state: GameState): GameState {
   if (state.turnPhase !== "push") {
     throw new Error("Can only pass during push phase.");
   }

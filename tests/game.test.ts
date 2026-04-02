@@ -1,5 +1,11 @@
+/**
+ * Node-based test suite for core game.ts logic.
+ * Run with: npm test
+ */
+
 import assert from "node:assert/strict";
 
+import type { GameState, Piece, Coordinate, PieceType, Player } from "../src/types.js";
 import {
   applyMove,
   applyPassPush,
@@ -18,7 +24,7 @@ import {
 } from "../src/game.js";
 import { chooseAIMove } from "../src/ai.js";
 
-const ADJACENT_STEPS = [
+const ADJACENT_STEPS: readonly Coordinate[] = [
   { row: 0, col: 1 },
   { row: 0, col: -1 },
   { row: -1, col: 0 },
@@ -27,7 +33,14 @@ const ADJACENT_STEPS = [
   { row: 1, col: 1 }
 ];
 
-function placePiece(state, row, col, player, type, suffix = "manual") {
+function placePiece(
+  state: GameState,
+  row: number,
+  col: number,
+  player: Player,
+  type: PieceType,
+  suffix: string = "manual"
+): void {
   state.board[row][col] = {
     id: `${player}-${type}-${suffix}`,
     player,
@@ -35,7 +48,7 @@ function placePiece(state, row, col, player, type, suffix = "manual") {
   };
 }
 
-(function testInitialSetupHasOnlyTownPawns() {
+(function testInitialSetupHasOnlyTownPawns(): void {
   const state = createInitialState();
   const counts = getRemainingPieceCounts(state);
 
@@ -48,7 +61,7 @@ function placePiece(state, row, col, player, type, suffix = "manual") {
   assert.equal(getPiece(state, 4, 6)?.player, "black");
 })();
 
-(function testLegalPlacementsExcludeTownsAndOccupiedSquares() {
+(function testLegalPlacementsExcludeTownsAndOccupiedSquares(): void {
   const state = createInitialState();
   const placements = getLegalPlacements(state, "white");
 
@@ -57,18 +70,18 @@ function placePiece(state, row, col, player, type, suffix = "manual") {
   assert.ok(!placements.some((placement) => placement.to.row === 4 && placement.to.col === 6));
 })();
 
-(function testApplyPlacementAdvancesToPushPhase() {
+(function testApplyPlacementAdvancesToPushPhase(): void {
   const state = createInitialState();
   const nextState = applyPlacement(state, { row: 0, col: 2 }, "horse");
 
   assert.equal(getPiece(nextState, 0, 2)?.type, "horse");
   assert.equal(getPiece(nextState, 0, 2)?.player, "white");
-  assert.equal(nextState.currentPlayer, "white");  // still white's turn (push phase)
+  assert.equal(nextState.currentPlayer, "white"); // still white's turn (push phase)
   assert.equal(nextState.turnPhase, "push");
   assert.equal(nextState.lastAction?.kind, "place");
 })();
 
-(function testPlacedPieceCanBeCapturedImmediatelyOnNextTurn() {
+(function testPlacedPieceCanBeCapturedImmediatelyOnNextTurn(): void {
   const state = createEmptyState("black");
 
   placePiece(state, 4, 4, "white", "pawn", "attacker");
@@ -90,22 +103,22 @@ function placePiece(state, row, col, player, type, suffix = "manual") {
   assert.equal(afterCapture.capturedPieces.white.length, 1);
 })();
 
-(function testCannotPlaceOnTownSquare() {
+(function testCannotPlaceOnTownSquare(): void {
   const state = createInitialState();
 
   assert.throws(() => applyPlacement(state, { row: 4, col: 2 }, "pawn"), /town square/i);
 })();
 
-(function testPlacementLimitIsEnforced() {
+(function testPlacementLimitIsEnforced(): void {
   let state = createInitialState();
-  const whiteSquares = [
+  const whiteSquares: Coordinate[] = [
     { row: 0, col: 0 },
     { row: 0, col: 1 },
     { row: 0, col: 2 },
     { row: 0, col: 3 },
     { row: 0, col: 4 }
   ];
-  const blackSquares = [
+  const blackSquares: Coordinate[] = [
     { row: 8, col: 4 },
     { row: 8, col: 5 },
     { row: 8, col: 6 },
@@ -115,18 +128,21 @@ function placePiece(state, row, col, player, type, suffix = "manual") {
 
   for (let index = 0; index < 5; index += 1) {
     state = applyPlacement(state, whiteSquares[index], "pawn");
-    state = applyPassPush(state);  // white push phase → black's turn
+    state = applyPassPush(state); // white push phase → black's turn
     state = applyPlacement(state, blackSquares[index], "pawn");
-    state = applyPassPush(state);  // black push phase → white's turn
+    state = applyPassPush(state); // black push phase → white's turn
   }
 
   const whiteReserve = getRemainingReserveCounts(state, "white");
   assert.equal(whiteReserve.pawn, 0);
 
-  assert.throws(() => applyPlacement(state, { row: 2, col: 4 }, "pawn"), /remaining pawn placements/i);
+  assert.throws(
+    () => applyPlacement(state, { row: 2, col: 4 }, "pawn"),
+    /remaining pawn placements/i
+  );
 })();
 
-(function testPawnSlidesAndStopsOnSameColorTile() {
+(function testPawnSlidesAndStopsOnSameColorTile(): void {
   const state = createEmptyState("white");
 
   placePiece(state, 4, 3, "white", "pawn", "slider");
@@ -144,7 +160,7 @@ function placePiece(state, row, col, player, type, suffix = "manual") {
   }
 
   // Any same-color tile on an unobstructed ray must be present as a legal destination.
-  const expectedEmptyStops = new Set();
+  const expectedEmptyStops = new Set<string>();
   for (const step of ADJACENT_STEPS) {
     let distance = 1;
     while (true) {
@@ -169,21 +185,25 @@ function placePiece(state, row, col, player, type, suffix = "manual") {
     }
   }
 
-  const actualEmptyStops = new Set(moves.filter((move) => !move.capture).map((move) => `${move.row},${move.col}`));
+  const actualEmptyStops = new Set(
+    moves.filter((move) => !move.capture).map((move) => `${move.row},${move.col}`)
+  );
   assert.deepEqual(actualEmptyStops, expectedEmptyStops);
 })();
 
-(function testHorseMovesOneOrTwoSquaresStraight() {
+(function testHorseMovesOneOrTwoSquaresStraight(): void {
   const state = createEmptyState("white");
 
   placePiece(state, 4, 4, "white", "horse");
 
-  const moves = getLegalMoves(state, 4, 4).map((square) => toAlgebraic(square)).sort();
+  const moves = getLegalMoves(state, 4, 4)
+    .map((square) => toAlgebraic(square))
+    .sort();
 
   assert.deepEqual(moves, ["c5", "c7", "d5", "d6", "e3", "e4", "e6", "e7", "f4", "f5", "g3", "g5"]);
 })();
 
-(function testTeacherTransformChangesTypeWithoutMovingTeacher() {
+(function testTeacherTransformChangesTypeWithoutMovingTeacher(): void {
   const state = createEmptyState("white");
 
   placePiece(state, 4, 4, "white", "teacher");
@@ -202,7 +222,7 @@ function placePiece(state, row, col, player, type, suffix = "manual") {
   assert.equal(nextState.lastAction?.kind, "transform");
 })();
 
-(function testTeacherCannotCaptureEnemyPiece() {
+(function testTeacherCannotCaptureEnemyPiece(): void {
   const state = createEmptyState("white");
 
   placePiece(state, 4, 4, "white", "teacher");
@@ -213,7 +233,7 @@ function placePiece(state, row, col, player, type, suffix = "manual") {
   assert.ok(!moves.some((move) => move.row === 4 && move.col === 5));
 })();
 
-(function testAdjacentPawnCanHopOverFriendlyPiece() {
+(function testAdjacentPawnCanHopOverFriendlyPiece(): void {
   const state = createEmptyState("white");
 
   placePiece(state, 4, 4, "white", "commander");
@@ -226,7 +246,7 @@ function placePiece(state, row, col, player, type, suffix = "manual") {
   assert.ok(moves.some((move) => move.row === 2 && move.col === 3 && move.capture));
 })();
 
-(function testEnemyCanCaptureSentinel() {
+(function testEnemyCanCaptureSentinel(): void {
   const state = createEmptyState("black");
 
   placePiece(state, 4, 3, "white", "sentinel");
@@ -238,7 +258,7 @@ function placePiece(state, row, col, player, type, suffix = "manual") {
   assert.ok(moves.some((move) => move.row === 4 && move.col === 3 && move.capture));
 })();
 
-(function testEnemyCanCapturePawnAdjacentToSentinel() {
+(function testEnemyCanCapturePawnAdjacentToSentinel(): void {
   const state = createEmptyState("black");
 
   placePiece(state, 4, 4, "white", "sentinel");
@@ -251,7 +271,7 @@ function placePiece(state, row, col, player, type, suffix = "manual") {
   assert.ok(moves.some((move) => move.row === 4 && move.col === 5 && move.capture));
 })();
 
-(function testSentinelCannotMove() {
+(function testSentinelCannotMove(): void {
   const state = createEmptyState("white");
 
   placePiece(state, 4, 4, "white", "sentinel");
@@ -262,7 +282,7 @@ function placePiece(state, row, col, player, type, suffix = "manual") {
   assert.ok(moves.length === 0);
 })();
 
-(function testTownControlSquares() {
+(function testTownControlSquares(): void {
   const state = createEmptyState("white");
 
   placePiece(state, 4, 2, "white", "pawn", "a");
@@ -272,7 +292,7 @@ function placePiece(state, row, col, player, type, suffix = "manual") {
   assert.equal(playerControlsBothTowns(state, "black"), false);
 })();
 
-(function testTownControlWinsAfterFullRound() {
+(function testTownControlWinsAfterFullRound(): void {
   const state = createEmptyState("white");
 
   placePiece(state, 4, 2, "white", "pawn", "a");
@@ -294,7 +314,7 @@ function placePiece(state, row, col, player, type, suffix = "manual") {
   assert.equal(afterBlackTurn.winner, "white");
 })();
 
-(function testAISelectsAvailableCapture() {
+(function testAISelectsAvailableCapture(): void {
   const state = createEmptyState("black");
 
   placePiece(state, 4, 4, "black", "pawn");
@@ -303,26 +323,26 @@ function placePiece(state, row, col, player, type, suffix = "manual") {
   const move = chooseAIMove(state, "black");
 
   assert.ok(move);
-  assert.equal(move.action, "move");
-  assert.equal(move.from.row, 4);
-  assert.equal(move.from.col, 4);
-  assert.equal(move.to.row, 3);
-  assert.equal(move.to.col, 3);
-  assert.equal(move.capture, true);
+  assert.equal(move!.action, "move");
+  assert.equal(move!.from?.row, 4);
+  assert.equal(move!.from?.col, 4);
+  assert.equal(move!.to.row, 3);
+  assert.equal(move!.to.col, 3);
+  assert.equal(move!.capture, true);
 })();
 
-(function testAICanChoosePlacementAction() {
+(function testAICanChoosePlacementAction(): void {
   const state = createInitialState();
   state.currentPlayer = "black";
   const move = chooseAIMove(state, "black");
 
   assert.ok(move);
-  assert.equal(move.action, "place");
-  assert.ok(move.placeType);
-  assert.equal(move.from, null);
+  assert.equal(move!.action, "place");
+  assert.ok(move!.placeType);
+  assert.equal(move!.from, null);
 })();
 
-(function testAIPlacementNeverTargetsTownSquares() {
+(function testAIPlacementNeverTargetsTownSquares(): void {
   const state = createEmptyState("black");
 
   placePiece(state, 8, 7, "white", "pawn", "alive");
@@ -330,14 +350,14 @@ function placePiece(state, row, col, player, type, suffix = "manual") {
   const move = chooseAIMove(state, "black");
 
   assert.ok(move);
-  assert.equal(move.action, "place");
-  assert.ok(!(move.to.row === 4 && move.to.col === 2));
-  assert.ok(!(move.to.row === 4 && move.to.col === 6));
+  assert.equal(move!.action, "place");
+  assert.ok(!(move!.to.row === 4 && move!.to.col === 2));
+  assert.ok(!(move!.to.row === 4 && move!.to.col === 6));
 })();
 
 console.log("Kingstep rules validation passed.");
 
-(function testPushPhaseHasPushMovesAndNoCaptures() {
+(function testPushPhaseHasPushMovesAndNoCaptures(): void {
   const state = createEmptyState("white");
 
   placePiece(state, 4, 2, "white", "pawn", "mover");
@@ -357,7 +377,7 @@ console.log("Kingstep rules validation passed.");
   assert.ok(!pushMoves.some((m) => m.capture), "push phase must not have capture moves");
 })();
 
-(function testPushMoveDisplacesEnemyPiece() {
+(function testPushMoveDisplacesEnemyPiece(): void {
   const state = createEmptyState("white");
 
   placePiece(state, 4, 2, "white", "pawn", "pusher");
@@ -374,7 +394,7 @@ console.log("Kingstep rules validation passed.");
   const pushMove = pushMoves.find((m) => m.push && m.row === 4 && m.col === 3);
 
   assert.ok(pushMove, "push move to (4,3) must exist");
-  assert.deepEqual(pushMove.pushTo, { row: 5, col: 4 });
+  assert.deepEqual(pushMove!.pushTo, { row: 5, col: 4 });
 
   const afterPush = applyMove(afterAction, { row: 3, col: 2 }, { row: 4, col: 3 });
 
@@ -382,6 +402,6 @@ console.log("Kingstep rules validation passed.");
   assert.equal(getPiece(afterPush, 5, 4)?.player, "black", "pushed piece now on (5,4)");
   assert.equal(getPiece(afterPush, 3, 2), null, "origin is empty");
   assert.equal(afterPush.lastAction?.kind, "push");
-  assert.equal(afterPush.currentPlayer, "black");  // full turn completed
+  assert.equal(afterPush.currentPlayer, "black"); // full turn completed
   assert.equal(afterPush.turnPhase, "action");
 })();
