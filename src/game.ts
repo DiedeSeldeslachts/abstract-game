@@ -20,7 +20,6 @@ import type {
   LastAction,
   PieceCounter,
   PlacementCounter,
-  MoveApplyOptions,
   AIMove,
 } from "./types.js";
 
@@ -34,20 +33,13 @@ export const TOWN_POSITIONS: readonly Coordinate[] = [
   { row: 4, col: 6 }  // g5
 ];
 export const CENTER_POSITION: Coordinate = { row: HEX_RADIUS, col: HEX_RADIUS }; // e5
-const UNIT_TYPES: readonly PieceType[] = ["commander", "horse", "pawn", "sentinel", "teacher"];
-const PLACEABLE_TYPES: readonly PlaceableType[] = ["pawn", "horse", "sentinel", "teacher"];
+const UNIT_TYPES: readonly PieceType[] = ["commander", "horse", "pawn", "sentinel"];
+const PLACEABLE_TYPES: readonly PlaceableType[] = ["pawn", "horse", "sentinel"];
 export const PLACEMENT_LIMITS: Record<PlaceableType, number> = {
   pawn: 5,
   horse: 2,
-  sentinel: 2,
-  teacher: 1
+  sentinel: 2
 };
-export const TEACHER_TRANSFORM_TARGET_TYPES: readonly PieceType[] = [
-  "commander",
-  "horse",
-  "pawn",
-  "sentinel"
-];
 
 const ADJACENT_STEPS: readonly Coordinate[] = [
   { row: 0, col: 1 },
@@ -423,48 +415,6 @@ function getHorseMovesForPlayer(
   return Array.from(movesBySquare.values());
 }
 
-function getTeacherTransformTargets(
-  state: GameState,
-  row: number,
-  col: number,
-  player: Player
-): MoveDestination[] {
-  const targets: MoveDestination[] = [];
-
-  for (const step of ADJACENT_STEPS) {
-    const targetRow = row + step.row;
-    const targetCol = col + step.col;
-
-    if (!isInsideBoard(targetRow, targetCol)) {
-      continue;
-    }
-
-    const piece = state.board[targetRow][targetCol];
-
-    if (!piece || piece.player !== player || piece.type === "teacher") {
-      continue;
-    }
-
-    const transformOptions = TEACHER_TRANSFORM_TARGET_TYPES.filter(
-      (type) => type !== piece.type
-    );
-
-    if (transformOptions.length === 0) {
-      continue;
-    }
-
-    targets.push({
-      row: targetRow,
-      col: targetCol,
-      capture: false,
-      transform: true,
-      transformOptions: transformOptions as PieceType[]
-    });
-  }
-
-  return targets;
-}
-
 function getLegalMovesForPlayer(
   state: GameState,
   row: number,
@@ -484,17 +434,6 @@ function getLegalMovesForPlayer(
 
   if (piece.type === "commander") {
     return getSingleStepMovesForPlayer(state, row, col, player);
-  }
-
-  if (piece.type === "teacher") {
-    const moves = getSingleStepMovesForPlayer(state, row, col, player).filter(
-      (move) => !move.capture
-    );
-    // Teacher cannot transform during push phase
-    if (state.turnPhase === "push") {
-      return moves;
-    }
-    return [...moves, ...getTeacherTransformTargets(state, row, col, player)];
   }
 
   if (piece.type === "horse") {
@@ -598,8 +537,7 @@ export function getRemainingReserveCounts(
   return {
     pawn: PLACEMENT_LIMITS.pawn - state.placedPieces[player].pawn,
     horse: PLACEMENT_LIMITS.horse - state.placedPieces[player].horse,
-    sentinel: PLACEMENT_LIMITS.sentinel - state.placedPieces[player].sentinel,
-    teacher: PLACEMENT_LIMITS.teacher - state.placedPieces[player].teacher
+    sentinel: PLACEMENT_LIMITS.sentinel - state.placedPieces[player].sentinel
   };
 }
 
@@ -637,8 +575,7 @@ export function getLegalPlacements(
           action: "place",
           to: { row, col },
           placeType: pieceType,
-          capture: false,
-          transform: false
+          capture: false
         });
       }
     }
@@ -672,24 +609,6 @@ export function getAllLegalMoves(
       const moves = getLegalMovesForPlayer(state, row, col, player);
 
       for (const move of moves) {
-        if (move.transform && Array.isArray(move.transformOptions)) {
-          for (const transformTo of move.transformOptions) {
-            allMoves.push({
-              action: "move",
-              from: { row, col },
-              to: { row: move.row, col: move.col },
-              capture: false,
-              piece,
-              transform: true,
-              transformTo,
-              push: false,
-              pushTo: null
-            });
-          }
-
-          continue;
-        }
-
         allMoves.push({
           action: "move",
           from: { row, col },
@@ -697,9 +616,7 @@ export function getAllLegalMoves(
           capture: move.capture,
           push: move.push ?? false,
           pushTo: move.pushTo ?? null,
-          piece,
-          transform: false,
-          transformTo: null
+          piece
         });
       }
     }
@@ -917,8 +834,7 @@ function resolveWinConditions(
 export function applyMove(
   state: GameState,
   from: Coordinate,
-  to: Coordinate,
-  options: MoveApplyOptions = {}
+  to: Coordinate
 ): GameState {
   if (state.winner) {
     throw new Error("The game is already finished.");
@@ -943,39 +859,7 @@ export function applyMove(
 
   const nextState = createNextStateBase(state);
 
-  const transformTo = options.transformTo ?? null;
-
-  if (targetMove.transform) {
-    if (!transformTo || !targetMove.transformOptions?.includes(transformTo)) {
-      throw new Error("Choose a valid piece type for Teacher transformation.");
-    }
-
-    const targetPiece = nextState.board[to.row][to.col];
-
-    if (
-      !targetPiece ||
-      targetPiece.player !== piece.player ||
-      targetPiece.type === "teacher"
-    ) {
-      throw new Error("Teacher can only transform friendly non-Teacher pieces.");
-    }
-
-    nextState.board[to.row][to.col] = {
-      ...targetPiece,
-      type: transformTo
-    };
-
-    nextState.lastAction = {
-      kind: "transform",
-      player: piece.player,
-      piece,
-      from: { ...from },
-      to: { ...to },
-      capturedPiece: null,
-      transformedFrom: targetPiece.type,
-      transformedTo: transformTo
-    };
-  } else if (targetMove.push) {
+  if (targetMove.push) {
     const pushedPiece = nextState.board[to.row][to.col];
     const pushTo = targetMove.pushTo!;
 

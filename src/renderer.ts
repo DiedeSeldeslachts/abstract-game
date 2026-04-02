@@ -4,7 +4,7 @@
  * All DOM references are cached at the top.
  */
 
-import type { GameState, UIState, PieceType, PlaceableType, Piece } from "./types.js";
+import type { GameState, UIState, PlaceableType, Piece } from "./types.js";
 import {
   BOARD_ROWS,
   BOARD_COLS,
@@ -36,16 +36,9 @@ interface ElementCache {
   whiteReservePawn: HTMLElement;
   whiteReserveHorse: HTMLElement;
   whiteReserveSentinel: HTMLElement;
-  whiteReserveTeacher: HTMLElement;
   blackReservePawn: HTMLElement;
   blackReserveHorse: HTMLElement;
   blackReserveSentinel: HTMLElement;
-  blackReserveTeacher: HTMLElement;
-  transformOverlay: HTMLElement;
-  transformTitle: HTMLElement;
-  transformPrompt: HTMLElement;
-  transformOptions: HTMLElement;
-  transformCancel: HTMLElement;
 }
 
 const ELEMENTS: ElementCache = {
@@ -62,16 +55,9 @@ const ELEMENTS: ElementCache = {
   whiteReservePawn: document.querySelector("#white-reserve-pawn")!,
   whiteReserveHorse: document.querySelector("#white-reserve-horse")!,
   whiteReserveSentinel: document.querySelector("#white-reserve-sentinel")!,
-  whiteReserveTeacher: document.querySelector("#white-reserve-teacher")!,
   blackReservePawn: document.querySelector("#black-reserve-pawn")!,
   blackReserveHorse: document.querySelector("#black-reserve-horse")!,
-  blackReserveSentinel: document.querySelector("#black-reserve-sentinel")!,
-  blackReserveTeacher: document.querySelector("#black-reserve-teacher")!,
-  transformOverlay: document.querySelector("#transform-overlay")!,
-  transformTitle: document.querySelector("#transform-overlay-title")!,
-  transformPrompt: document.querySelector("#transform-overlay-prompt")!,
-  transformOptions: document.querySelector("#transform-options")!,
-  transformCancel: document.querySelector("#transform-cancel")!
+  blackReserveSentinel: document.querySelector("#black-reserve-sentinel")!
 };
 
 /** Board element exported so the controller can attach event delegation. */
@@ -85,88 +71,10 @@ export const RESERVE_BUTTONS = Array.from(document.querySelectorAll("[data-place
 // Piece display constants
 // ---------------------------------------------------------------------------
 
-const PIECE_SYMBOLS: Record<string, Record<PieceType, string>> = {
-  white: { commander: "♔", horse: "♘", pawn: "♙", sentinel: "♖", teacher: "♗" },
-  black: { commander: "♚", horse: "♞", pawn: "♟", sentinel: "♜", teacher: "♝" }
+const PIECE_SYMBOLS = {
+  white: { commander: "♔", horse: "♘", pawn: "♙", sentinel: "♖" },
+  black: { commander: "♚", horse: "♞", pawn: "♟", sentinel: "♜" }
 };
-
-// ---------------------------------------------------------------------------
-// Transform overlay
-// Owns its own async promise resolver. The controller awaits openTransformOverlay().
-// ---------------------------------------------------------------------------
-
-let transformChoiceResolver: ((value: PieceType | null) => void) | null = null;
-
-function resolveTransformOverlay(result: PieceType | null): void {
-  if (!transformChoiceResolver) return;
-
-  ELEMENTS.transformOverlay.classList.remove("is-open");
-  ELEMENTS.transformOverlay.setAttribute("aria-hidden", "true");
-  ELEMENTS.transformOptions.innerHTML = "";
-
-  const resolve = transformChoiceResolver;
-  transformChoiceResolver = null;
-  resolve(result);
-}
-
-/**
- * Opens the teacher transform overlay and returns a Promise that resolves to
- * the chosen piece type string, or null if the player cancelled.
- */
-export function openTransformOverlay(
-  options: PieceType[],
-  currentPlayer: string,
-  targetPiece: Piece | null = null
-): Promise<PieceType | null> {
-  if (options.length === 0) return Promise.resolve(null);
-
-  return new Promise((resolve) => {
-    transformChoiceResolver = resolve;
-
-    ELEMENTS.transformTitle.textContent = targetPiece
-      ? `Transform ${titleCase(targetPiece.player)} ${targetPiece.type}`
-      : "Choose transform target";
-    ELEMENTS.transformPrompt.textContent = "Choose the new piece type.";
-    ELEMENTS.transformOptions.innerHTML = "";
-
-    for (const option of options) {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "transform-option";
-      button.setAttribute("aria-label", `Transform into ${option}`);
-      button.innerHTML = `<span class="transform-glyph">${PIECE_SYMBOLS[currentPlayer][option as PieceType]}</span><span class="transform-label">${titleCase(option)}</span>`;
-      button.addEventListener("click", () => resolveTransformOverlay(option as PieceType));
-      ELEMENTS.transformOptions.append(button);
-    }
-
-    ELEMENTS.transformOverlay.classList.add("is-open");
-    ELEMENTS.transformOverlay.setAttribute("aria-hidden", "false");
-    const firstOption = ELEMENTS.transformOptions.querySelector(".transform-option") as HTMLButtonElement | null;
-    firstOption?.focus();
-  });
-}
-
-/**
- * Cancels the transform overlay, resolving its promise with null.
- * Safe to call when no overlay is open (no-op).
- */
-export function cancelTransformOverlay(): void {
-  resolveTransformOverlay(null);
-}
-
-// Overlay cancel via button, backdrop click, and Escape key
-ELEMENTS.transformCancel.addEventListener("click", () => cancelTransformOverlay());
-
-ELEMENTS.transformOverlay.addEventListener("click", (event) => {
-  if (event.target === ELEMENTS.transformOverlay) cancelTransformOverlay();
-});
-
-window.addEventListener("keydown", (event) => {
-  if (event.key === "Escape" && transformChoiceResolver) {
-    event.preventDefault();
-    cancelTransformOverlay();
-  }
-});
 
 // ---------------------------------------------------------------------------
 // Private helpers
@@ -382,32 +290,24 @@ function renderLastAction(gameState: GameState): void {
     return;
   }
 
-  if (action.kind === "transform") {
-    ELEMENTS.lastActionText.textContent = `${pieceName} transformed ${titleCase(action.player)} ${action.transformedFrom} on ${to} into ${action.transformedTo}.`;
-    return;
-  }
-
   ELEMENTS.lastActionText.textContent = `${pieceName} moved from ${from} to ${to}.`;
 }
 
 function renderReservePanel(gameState: GameState, uiState: UIState): void {
-  const { selectedPlacementType, aiThinking, transformChoicePending } = uiState;
+  const { selectedPlacementType, aiThinking } = uiState;
   const white = getRemainingReserveCounts(gameState, "white");
   const black = getRemainingReserveCounts(gameState, "black");
 
   ELEMENTS.whiteReservePawn.textContent = String(white.pawn);
   ELEMENTS.whiteReserveHorse.textContent = String(white.horse);
   ELEMENTS.whiteReserveSentinel.textContent = String(white.sentinel);
-  ELEMENTS.whiteReserveTeacher.textContent = String(white.teacher);
   ELEMENTS.blackReservePawn.textContent = String(black.pawn);
   ELEMENTS.blackReserveHorse.textContent = String(black.horse);
   ELEMENTS.blackReserveSentinel.textContent = String(black.sentinel);
-  ELEMENTS.blackReserveTeacher.textContent = String(black.teacher);
 
   const buttonsBlocked =
     gameState.winner !== null ||
     aiThinking ||
-    transformChoicePending ||
     isAIControlledPlayer(gameState.currentPlayer, uiState) ||
     gameState.turnPhase === "push";
 

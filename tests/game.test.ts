@@ -229,36 +229,6 @@ function placePiece(
   assert.deepEqual(moves, ["c5", "c7", "d5", "d6", "e3", "e4", "e6", "e7", "f4", "f5", "g3", "g5"]);
 })();
 
-(function testTeacherTransformChangesTypeWithoutMovingTeacher(): void {
-  const state = createEmptyState("white");
-
-  placePiece(state, 4, 4, "white", "teacher");
-  placePiece(state, 4, 5, "white", "pawn");
-  placePiece(state, 8, 7, "black", "pawn");
-
-  const nextState = applyMove(
-    state,
-    { row: 4, col: 4 },
-    { row: 4, col: 5 },
-    { transformTo: "commander" }
-  );
-
-  assert.equal(getPiece(nextState, 4, 4)?.type, "teacher");
-  assert.equal(getPiece(nextState, 4, 5)?.type, "commander");
-  assert.equal(nextState.lastAction?.kind, "transform");
-})();
-
-(function testTeacherCannotCaptureEnemyPiece(): void {
-  const state = createEmptyState("white");
-
-  placePiece(state, 4, 4, "white", "teacher");
-  placePiece(state, 4, 5, "black", "pawn", "target");
-
-  const moves = getLegalMoves(state, 4, 4);
-
-  assert.ok(!moves.some((move) => move.row === 4 && move.col === 5));
-})();
-
 (function testAdjacentPawnCanHopOverFriendlyPiece(): void {
   const state = createEmptyState("white");
 

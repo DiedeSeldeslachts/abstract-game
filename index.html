@@ -59,10 +59,6 @@
                 <span class="reserve-symbol">♖</span>
                 <span>Place Sentinel</span>
               </button>
-              <button class="reserve-button" type="button" data-place-type="teacher">
-                <span class="reserve-symbol">♗</span>
-                <span>Place Teacher</span>
-              </button>
             </div>
           </section>
 
@@ -101,10 +97,6 @@
               <strong id="white-reserve-sentinel"></strong>
             </div>
             <div class="metric-row">
-              <span>White Teacher</span>
-              <strong id="white-reserve-teacher"></strong>
-            </div>
-            <div class="metric-row">
               <span>Black Pawns</span>
               <strong id="black-reserve-pawn"></strong>
             </div>
@@ -115,10 +107,6 @@
             <div class="metric-row">
               <span>Black Sentinels</span>
               <strong id="black-reserve-sentinel"></strong>
-            </div>
-            <div class="metric-row">
-              <span>Black Teacher</span>
-              <strong id="black-reserve-teacher"></strong>
             </div>
           </section>
 
@@ -138,7 +126,7 @@
               <li>Start with one pawn each: White on c5, Black on g5.</li>
               <li>Each turn: either move one on-board piece or place one reserve piece.</li>
               <li>Placement is legal on empty non-town hexes only.</li>
-              <li>Reserve limits per player: 5 pawns, 2 horses, 2 sentinels, 1 teacher.</li>
+              <li>Reserve limits per player: 5 pawns, 2 horses, 2 sentinels.</li>
               <li>Most pieces move one adjacent hex.</li>
               <li>Horses move one or two hexes in a straight line.</li>
               <li>Pawns adjacent to a commander may hop over one friendly adjacent piece.</li>
@@ -147,23 +135,6 @@
           </section>
         </aside>
       </main>
-    </div>
-
-    <div
-      id="transform-overlay"
-      class="transform-overlay"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="transform-overlay-title"
-      aria-describedby="transform-overlay-prompt"
-      aria-hidden="true"
-    >
-      <div class="transform-dialog">
-        <h2 id="transform-overlay-title">Choose transform target</h2>
-        <p id="transform-overlay-prompt" class="support-text">Choose the new piece type.</p>
-        <div id="transform-options" class="transform-options" role="group" aria-label="Teacher transform choices"></div>
-        <button id="transform-cancel" class="secondary-button" type="button">Cancel</button>
-      </div>
     </div>
 
     <script type="module" src="./dist/src/main.js"></script>

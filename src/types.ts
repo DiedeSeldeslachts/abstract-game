@@ -10,12 +10,12 @@ export type Player = "white" | "black";
 /**
  * Piece type string
  */
-export type PieceType = "commander" | "horse" | "pawn" | "sentinel" | "teacher";
+export type PieceType = "commander" | "horse" | "pawn" | "sentinel";
 
 /**
  * Placeable piece types (subset of PieceType that can be placed from reserve)
  */
-export type PlaceableType = "pawn" | "horse" | "sentinel" | "teacher";
+export type PlaceableType = "pawn" | "horse" | "sentinel";
 
 /**
  * Turn phase - action phase or push phase
@@ -59,8 +59,6 @@ export interface MoveDestination {
   row: number;
   col: number;
   capture: boolean;
-  transform?: boolean;
-  transformOptions?: PieceType[];
   push?: boolean;
   pushTo?: Coordinate;
 }
@@ -73,11 +71,10 @@ export interface PlacementAction {
   to: Coordinate;
   placeType: PlaceableType;
   capture: false;
-  transform: false;
 }
 
 /**
- * Move action from getAllLegalMoves (after transformation expansion)
+ * Move action from getAllLegalMoves
  */
 export interface MoveAction {
   action: "move";
@@ -87,8 +84,6 @@ export interface MoveAction {
   push: boolean;
   pushTo: Coordinate | null;
   piece: Piece;
-  transform: boolean;
-  transformTo: PieceType | null;
 }
 
 /**
@@ -139,15 +134,6 @@ export interface LastActionPlace extends LastActionBase {
 }
 
 /**
- * Action record when a teacher transforms a piece
- */
-export interface LastActionTransform extends LastActionBase {
-  kind: "transform";
-  transformedFrom: PieceType;
-  transformedTo: PieceType;
-}
-
-/**
  * Action record when a player passes push phase
  */
 export interface LastActionPass extends LastActionBase {
@@ -162,7 +148,6 @@ export type LastAction =
   | LastActionCapture
   | LastActionPush
   | LastActionPlace
-  | LastActionTransform
   | LastActionPass
   | null;
 
@@ -174,7 +159,6 @@ export interface PieceCounter {
   horse: number;
   pawn: number;
   sentinel: number;
-  teacher: number;
 }
 
 /**
@@ -184,7 +168,6 @@ export interface PlacementCounter {
   pawn: number;
   horse: number;
   sentinel: number;
-  teacher: number;
 }
 
 /**
@@ -222,7 +205,6 @@ export interface UIState {
   selectedMoves: MoveDestination[];
   selectedPlacementType: PlaceableType | null;
   aiThinking: boolean;
-  transformChoicePending: boolean;
 }
 
 /**
@@ -234,14 +216,5 @@ export interface AIMove {
   to: Coordinate;
   capture: boolean;
   piece: Piece | null;
-  transform: boolean;
-  transformTo: PieceType | null;
   placeType: PlaceableType | null;
-}
-
-/**
- * Applied transform move options
- */
-export interface MoveApplyOptions {
-  transformTo?: PieceType | null;
 }

@@ -7,10 +7,9 @@ On every turn, a player chooses exactly one action:
 - Move one piece already on the board, or
 - Place one reserve piece on an empty non-town square.
 
-Reserve limits per player are 5 pawns, 2 horses, 2 sentinels, and 1 teacher.
+Reserve limits per player are 5 pawns, 2 horses, and 2 sentinels.
 Most pieces move one square in any direction, horses move one or two squares in a straight line,
-commanders grant adjacent friendly pawns a hop option, teachers can transform adjacent friendly pieces,
-and sentinels project a 1-tile shield enemies cannot cross.
+commanders grant adjacent friendly pawns a hop option, and sentinels cannot move.
 
 You win by capturing every opposing piece or by controlling both town squares through one full round.
 In this implementation, you play as White and the AI controls Black.

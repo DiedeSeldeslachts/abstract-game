@@ -3,7 +3,7 @@
  * Manages UI state, event handlers, and turn flow.
  */
 
-import type { UIState, GameState, Coordinate, PlaceableType, PieceType } from "./types.js";
+import type { UIState, GameState, Coordinate, PlaceableType } from "./types.js";
 import {
   applyMove,
   applyPassPush,
@@ -17,8 +17,6 @@ import {
 } from "./game.js";
 import { chooseAIMove } from "./ai.js";
 import {
-  cancelTransformOverlay,
-  openTransformOverlay,
   renderGame,
   BOARD_ELEMENT,
   GAME_MODE_SELECT,
@@ -47,8 +45,7 @@ let uiState: UIState = {
   selectedSquare: null,
   selectedMoves: [],
   selectedPlacementType: null,
-  aiThinking: false,
-  transformChoicePending: false
+  aiThinking: false
 };
 
 let aiMoveTimer: ReturnType<typeof window.setTimeout> | null = null;
@@ -113,7 +110,7 @@ function performAIMove(): void {
   state =
     move.action === "place"
       ? applyPlacement(state, move.to, move.placeType!)
-      : applyMove(state, move.from!, move.to, { transformTo: move.transformTo });
+      : applyMove(state, move.from!, move.to);
   clearSelection();
 
   // AI may have a second move (push phase after action phase)
@@ -147,14 +144,13 @@ function scheduleAIMove(): void {
 // Event handlers
 // ---------------------------------------------------------------------------
 
-async function handleSquareClick(event: Event): Promise<void> {
+function handleSquareClick(event: Event): void {
   const hexEl = (event.target as Element).closest("button[data-row][data-col]");
 
   if (
     !hexEl ||
     state.winner ||
     uiState.aiThinking ||
-    uiState.transformChoicePending ||
     isAIControlledPlayer(state.currentPlayer)
   ) {
     return;
@@ -178,26 +174,7 @@ async function handleSquareClick(event: Event): Promise<void> {
 
   // Move mode: click a highlighted hex to move the selected piece
   if (uiState.selectedSquare && targetMove) {
-    let transformTo: PieceType | null = null;
-
-    if (targetMove.transform) {
-      const targetPiece = state.board[row][col];
-      uiState.transformChoicePending = true;
-      render();
-      transformTo = await openTransformOverlay(
-        targetMove.transformOptions ?? [],
-        state.currentPlayer,
-        targetPiece
-      );
-      uiState.transformChoicePending = false;
-
-      if (!transformTo) {
-        render();
-        return;
-      }
-    }
-
-    state = applyMove(state, uiState.selectedSquare, { row, col }, { transformTo });
+    state = applyMove(state, uiState.selectedSquare, { row, col });
     clearSelection();
     checkAutoPassPushPhase();
     render();
@@ -227,7 +204,6 @@ function handleReserveButtonClick(event: Event): void {
   if (
     state.winner ||
     uiState.aiThinking ||
-    uiState.transformChoicePending ||
     isAIControlledPlayer(state.currentPlayer) ||
     state.turnPhase === "push"
   ) {
@@ -262,12 +238,10 @@ function handleModeChange(event: Event): void {
     aiMoveTimer = null;
   }
 
-  cancelTransformOverlay();
   uiState.gameMode = nextMode;
   state = createInitialState();
   clearSelection();
   uiState.aiThinking = false;
-  uiState.transformChoicePending = false;
   render();
   scheduleAIMove();
 }
@@ -278,13 +252,11 @@ function handleRestartClick(): void {
     aiMoveTimer = null;
   }
 
-  cancelTransformOverlay();
   state = createInitialState();
   uiState.selectedSquare = null;
   uiState.selectedMoves = [];
   uiState.selectedPlacementType = null;
   uiState.aiThinking = false;
-  uiState.transformChoicePending = false;
   render();
 }
 

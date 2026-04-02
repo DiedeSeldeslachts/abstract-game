@@ -22,10 +22,10 @@ through one full opponent turn.
 - 2 town squares at c5 and g5
 - White pieces:
   - 1 starting pawn (already on c5)
-  - Reserve pool: 5 pawns, 2 horses, 2 sentinels, 1 teacher
+  - Reserve pool: 5 pawns, 2 horses, 2 sentinels
 - Black pieces:
   - 1 starting pawn (already on g5)
-  - Reserve pool: 5 pawns, 2 horses, 2 sentinels, 1 teacher
+  - Reserve pool: 5 pawns, 2 horses, 2 sentinels
 
 ## Objective
 
@@ -85,7 +85,6 @@ Reserve placement limits (per player):
 - Pawn: up to 5 placements
 - Horse: up to 2 placements
 - Sentinel: up to 2 placements
-- Teacher: up to 1 placement
 
 Piece movement rules:
 
@@ -93,15 +92,6 @@ Piece movement rules:
 - Horses move one or two squares in one straight direction (orthogonal or diagonal).
 - For a two-square horse move, the intermediate square must be empty and not the center tile.
 - Sentinels cannot move. They occupy a square but have no legal move actions.
-
-Teacher transformation rule:
-
-- Teachers may only move to empty adjacent squares; they cannot capture by movement.
-- A teacher may use its move action to transform one adjacent friendly non-Teacher piece instead of moving.
-- The transformed piece stays on its current square.
-- The chosen type must be one of: commander, horse, pawn, sentinel.
-- The chosen type cannot be teacher.
-- The transformed piece cannot keep its current type.
 
 Commander aura rule:
 
@@ -146,7 +136,6 @@ Pawn 2nd move rule:
 - A piece placed on the 1st move can be captured normally by the opponent on their next 1st move; placement grants no capture immunity.
 - If a player has no legal 1st move actions, they may not skip it; but if the board and reserve both yield no valid action, the game is considered stuck (draw by stalemate is not formally defined in the current rules).
 - If a player has no legal 2nd move actions, the 2nd move is skipped.
-- Teacher cannot transform on the 2nd move; it may only move spatially.
 
 ## End of Game
 
@@ -208,14 +197,14 @@ If no blue tile (or enemy piece) is reachable in a given direction, the pawn may
 - Replaced full-army starting setup with minimal setup: one white pawn on c5 and one black pawn on g5.
 - Moved the right-side town one tile to the right: f5 -> g5.
 - Added dual-action turn structure: move one piece or place one reserve piece.
-- Added reserve placement limits per player: 5 pawns, 2 horses, 2 sentinels, 1 teacher.
+- Added reserve placement limits per player: 5 pawns, 2 horses, 2 sentinels.
 - Added placement restriction: pieces cannot be placed directly on town squares.
 - Updated setup, edge cases, and examples to align with placement-first gameplay.
 - Updated sentinel mechanics: sentinels can now be captured and cannot move.
 - Removed sentinel protection rule: pawns adjacent to sentinels are no longer protected from capture.
 - Clarified that newly placed pieces are immediately capturable on the opponent's next turn.
-- Changed turn structure to two sequential moves per turn: 1st move (action: move/capture or place), 2nd move (push: move to empty square or push enemy piece away, no captures). Teacher cannot transform on the 2nd move. The 2nd move is skipped automatically if no legal options exist.
-- Updated teacher movement rules: teachers cannot capture pieces by movement.
+- Changed turn structure to two sequential moves per turn: 1st move (action: move/capture or place), 2nd move (push: move to empty square or push enemy piece away, no captures). The 2nd move is skipped automatically if no legal options exist.
 - Added tile colors: every playable tile has one of 4 colors (green, blue, yellow, brown), 15 tiles each.
 - Added center tile rule: e5 is white and impassable — no piece may enter or be placed on it.
 - Added capture tile-color rule: on the 1st move, a piece can only capture an enemy if there is a tile of the same color as the capturing piece's starting tile along the movement path to the target (inclusive). This applies to all capture types: single-step, horse, pawn slide, and commander aura hops.
+- Removed teacher piece and all transformation mechanics from the ruleset.

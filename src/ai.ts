@@ -31,8 +31,7 @@ const CAPTURE_VALUES: Record<PieceType, number> = {
   commander: 12,
   horse: 6,
   pawn: 4,
-  sentinel: 8,
-  teacher: 10
+  sentinel: 8
 };
 
 const SEARCH_MAX_DEPTH = 3;
@@ -96,8 +95,7 @@ function actionKey(action: GameAction): string {
     `${move.from.row},${move.from.col}`,
     `${move.to.row},${move.to.col}`,
     move.capture ? "capture" : "quiet",
-    move.push ? `push:${move.pushTo?.row ?? "x"},${move.pushTo?.col ?? "x"}` : "nopush",
-    move.transform ? `transform:${move.transformTo}` : "notransform"
+    move.push ? `push:${move.pushTo?.row ?? "x"},${move.pushTo?.col ?? "x"}` : "nopush"
   ].join("|");
 }
 
@@ -393,7 +391,7 @@ function getOpeningAggressionScore(state: GameState, player: Player): number {
   }
 
   const reserve = getRemainingReserveCounts(state, player);
-  const reserveFlexibility = reserve.horse * 2 + reserve.teacher * 3 + reserve.sentinel * 2 + reserve.pawn;
+  const reserveFlexibility = reserve.horse * 2 + reserve.sentinel * 2 + reserve.pawn;
 
   return activity - reserveFlexibility * Math.floor(moveBias / 3);
 }
@@ -496,7 +494,7 @@ function applyAction(state: GameState, action: GameAction): GameState {
   }
 
   const move = action as MoveAction;
-  return applyMove(state, move.from, move.to, { transformTo: move.transformTo });
+  return applyMove(state, move.from, move.to);
 }
 
 function evaluateMoveForOrdering(state: GameState, move: GameAction, rootPlayer: Player): number {
@@ -533,10 +531,6 @@ function evaluateMoveForOrdering(state: GameState, move: GameAction, rootPlayer:
 
     if (isTownSquare(moveAction.to)) {
       score += moveAction.capture ? 380 : 220;
-    }
-
-    if (moveAction.transform && moveAction.transformTo) {
-      score += (CAPTURE_VALUES[moveAction.transformTo] ?? 0) * 16;
     }
 
     if (moveAction.push) {
@@ -581,7 +575,7 @@ function getForcingMoves(state: GameState, moves: GameAction[]): GameAction[] {
     }
 
     const moveAction = move as MoveAction;
-    if (moveAction.capture || moveAction.transform || moveAction.push || isTownSquare(moveAction.to)) {
+    if (moveAction.capture || moveAction.push || isTownSquare(moveAction.to)) {
       forcing.push(move);
     }
   }
@@ -787,8 +781,6 @@ function toAIMove(action: GameAction): AIMove {
       to: { ...placement.to },
       capture: false,
       piece: null,
-      transform: false,
-      transformTo: null,
       placeType: placement.placeType
     };
   }
@@ -800,8 +792,6 @@ function toAIMove(action: GameAction): AIMove {
     to: { ...move.to },
     capture: move.capture,
     piece: move.piece,
-    transform: move.transform,
-    transformTo: move.transformTo,
     placeType: null
   };
 }
