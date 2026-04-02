@@ -10,12 +10,12 @@ export type Player = "white" | "black";
 /**
  * Piece type string
  */
-export type PieceType = "commander" | "horse" | "pawn" | "sentinel";
+export type PieceType = "commander" | "horse" | "king" | "pawn" | "sentinel";
 
 /**
  * Placeable piece types (subset of PieceType that can be placed from reserve)
  */
-export type PlaceableType = "pawn" | "horse" | "sentinel";
+export type PlaceableType = "pawn" | "horse" | "king" | "sentinel";
 
 /**
  * Turn phase - action phase or push phase
@@ -157,6 +157,7 @@ export type LastAction =
 export interface PieceCounter {
   commander: number;
   horse: number;
+  king: number;
   pawn: number;
   sentinel: number;
 }
@@ -167,6 +168,7 @@ export interface PieceCounter {
 export interface PlacementCounter {
   pawn: number;
   horse: number;
+  king: number;
   sentinel: number;
 }
 

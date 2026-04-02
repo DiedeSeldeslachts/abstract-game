@@ -14,7 +14,7 @@ import {
   isCenterTile,
   isTownSquare,
   getTileColor,
-  playerControlsBothTowns,
+  getWinReason,
   toAlgebraic
 } from "./game.js";
 
@@ -36,9 +36,11 @@ interface ElementCache {
   blackCaptures: HTMLElement;
   whiteReservePawn: HTMLElement;
   whiteReserveHorse: HTMLElement;
+  whiteReserveKing: HTMLElement;
   whiteReserveSentinel: HTMLElement;
   blackReservePawn: HTMLElement;
   blackReserveHorse: HTMLElement;
+  blackReserveKing: HTMLElement;
   blackReserveSentinel: HTMLElement;
 }
 
@@ -56,9 +58,11 @@ const ELEMENTS: ElementCache = {
   blackCaptures: document.querySelector("#black-captures")!,
   whiteReservePawn: document.querySelector("#white-reserve-pawn")!,
   whiteReserveHorse: document.querySelector("#white-reserve-horse")!,
+  whiteReserveKing: document.querySelector("#white-reserve-king")!,
   whiteReserveSentinel: document.querySelector("#white-reserve-sentinel")!,
   blackReservePawn: document.querySelector("#black-reserve-pawn")!,
   blackReserveHorse: document.querySelector("#black-reserve-horse")!,
+  blackReserveKing: document.querySelector("#black-reserve-king")!,
   blackReserveSentinel: document.querySelector("#black-reserve-sentinel")!
 };
 
@@ -75,8 +79,8 @@ export const RESERVE_BUTTONS = Array.from(document.querySelectorAll("[data-place
 // ---------------------------------------------------------------------------
 
 const PIECE_SYMBOLS = {
-  white: { commander: "♔", horse: "♘", pawn: "♙", sentinel: "♖" },
-  black: { commander: "♚", horse: "♞", pawn: "♟", sentinel: "♜" }
+  white: { commander: "♕", horse: "♘", king: "♔", pawn: "♙", sentinel: "♖" },
+  black: { commander: "♛", horse: "♞", king: "♚", pawn: "♟", sentinel: "♜" }
 };
 
 // ---------------------------------------------------------------------------
@@ -155,7 +159,7 @@ function renderBoard(gameState: GameState, uiState: UIState): void {
       const isCenter = isCenterTile(row, col);
       const pieceLabel = piece
         ? formatPieceName(piece)
-        : `Empty hex${isTown ? " (town)" : ""}${isCenter ? " (impassable)" : ""}`;
+        : `Empty hex${isTown ? " (town)" : ""}${isCenter ? " (king only)" : ""}`;
       hex.setAttribute("aria-label", `${toAlgebraic({ row, col })}: ${pieceLabel}`);
 
       if (piece) {
@@ -195,10 +199,7 @@ function renderStatus(gameState: GameState, uiState: UIState): void {
     : titleCase(gameState.currentPlayer);
 
   if (gameState.winner) {
-    const reason = playerControlsBothTowns(gameState, gameState.winner)
-      ? "controlling both towns"
-      : "removing every opposing piece from the board";
-    ELEMENTS.statusText.textContent = `${titleCase(gameState.winner)} wins by ${reason}.`;
+    ELEMENTS.statusText.textContent = `${titleCase(gameState.winner)} wins by ${getWinReason(gameState)}.`;
     return;
   }
 
@@ -303,9 +304,11 @@ function renderReservePanel(gameState: GameState, uiState: UIState): void {
 
   ELEMENTS.whiteReservePawn.textContent = String(white.pawn);
   ELEMENTS.whiteReserveHorse.textContent = String(white.horse);
+  ELEMENTS.whiteReserveKing.textContent = String(white.king);
   ELEMENTS.whiteReserveSentinel.textContent = String(white.sentinel);
   ELEMENTS.blackReservePawn.textContent = String(black.pawn);
   ELEMENTS.blackReserveHorse.textContent = String(black.horse);
+  ELEMENTS.blackReserveKing.textContent = String(black.king);
   ELEMENTS.blackReserveSentinel.textContent = String(black.sentinel);
 
   const buttonsBlocked =

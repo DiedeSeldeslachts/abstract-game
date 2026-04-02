@@ -33,11 +33,12 @@ export const TOWN_POSITIONS: readonly Coordinate[] = [
   { row: 4, col: 6 }  // g5
 ];
 export const CENTER_POSITION: Coordinate = { row: HEX_RADIUS, col: HEX_RADIUS }; // e5
-const UNIT_TYPES: readonly PieceType[] = ["commander", "horse", "pawn", "sentinel"];
-const PLACEABLE_TYPES: readonly PlaceableType[] = ["pawn", "horse", "sentinel"];
+const UNIT_TYPES: readonly PieceType[] = ["commander", "horse", "king", "pawn", "sentinel"];
+const PLACEABLE_TYPES: readonly PlaceableType[] = ["pawn", "horse", "king", "sentinel"];
 export const PLACEMENT_LIMITS: Record<PlaceableType, number> = {
   pawn: 5,
   horse: 2,
+  king: 1,
   sentinel: 2
 };
 
@@ -142,7 +143,8 @@ function getSingleStepMovesForPlayer(
   state: GameState,
   row: number,
   col: number,
-  player: Player
+  player: Player,
+  allowCenter = false
 ): MoveDestination[] {
   const isPushPhase = state.turnPhase === "push";
   const moves: MoveDestination[] = [];
@@ -151,7 +153,11 @@ function getSingleStepMovesForPlayer(
     const nextRow = row + step.row;
     const nextCol = col + step.col;
 
-    if (!isEnterableSquare(nextRow, nextCol)) {
+    const enterable = allowCenter
+      ? isInsideBoard(nextRow, nextCol)
+      : isEnterableSquare(nextRow, nextCol);
+
+    if (!enterable) {
       continue;
     }
 
@@ -432,8 +438,8 @@ function getLegalMovesForPlayer(
     return [];
   }
 
-  if (piece.type === "commander") {
-    return getSingleStepMovesForPlayer(state, row, col, player);
+  if (piece.type === "commander" || piece.type === "king") {
+    return getSingleStepMovesForPlayer(state, row, col, player, piece.type === "king");
   }
 
   if (piece.type === "horse") {
@@ -537,6 +543,7 @@ export function getRemainingReserveCounts(
   return {
     pawn: PLACEMENT_LIMITS.pawn - state.placedPieces[player].pawn,
     horse: PLACEMENT_LIMITS.horse - state.placedPieces[player].horse,
+    king: PLACEMENT_LIMITS.king - state.placedPieces[player].king,
     sentinel: PLACEMENT_LIMITS.sentinel - state.placedPieces[player].sentinel
   };
 }
@@ -568,6 +575,10 @@ export function getLegalPlacements(
 
       for (const pieceType of PLACEABLE_TYPES) {
         if (reserve[pieceType] <= 0) {
+          continue;
+        }
+
+        if (pieceType === "king" && !isEdgeTile(row, col)) {
           continue;
         }
 
@@ -661,6 +672,12 @@ export function isTownSquare(row: number, col: number): boolean {
 
 export function isCenterTile(row: number, col: number): boolean {
   return row === HEX_RADIUS && col === HEX_RADIUS;
+}
+
+export function isEdgeTile(row: number, col: number): boolean {
+  if (!isInsideBoard(row, col)) return false;
+  const { q, r } = toAxial({ row, col });
+  return Math.abs(q) === HEX_RADIUS || Math.abs(r) === HEX_RADIUS || Math.abs(q + r) === HEX_RADIUS;
 }
 
 function isEnterableSquare(row: number, col: number): boolean {
@@ -815,6 +832,24 @@ function resolveWinConditions(
     nextState.winner = actingPlayer;
   }
 
+  // King captured: if opponent placed a king but it is no longer on the board, acting player wins
+  if (!nextState.winner && nextState.pieceCounters[opponent].king > 0) {
+    const opponentKingOnBoard = nextState.board.some(
+      (boardRow) => boardRow.some((p) => p !== null && p.player === opponent && p.type === "king")
+    );
+    if (!opponentKingOnBoard) {
+      nextState.winner = actingPlayer;
+    }
+  }
+
+  // King on center: if a king occupies the center tile, that king's owner wins immediately
+  if (!nextState.winner) {
+    const centerPiece = nextState.board[CENTER_POSITION.row][CENTER_POSITION.col];
+    if (centerPiece?.type === "king") {
+      nextState.winner = centerPiece.player;
+    }
+  }
+
   // Town win and pending update only at end of a full turn (push phase → action phase)
   if (nextState.turnPhase === "action") {
     if (
@@ -829,6 +864,28 @@ function resolveWinConditions(
       ? actingPlayer
       : null;
   }
+}
+
+export function getWinReason(state: GameState): string {
+  if (!state.winner) return "";
+
+  const winner = state.winner;
+  const opponent = getOpponent(winner);
+
+  const centerPiece = state.board[CENTER_POSITION.row][CENTER_POSITION.col];
+  if (centerPiece?.player === winner && centerPiece.type === "king") {
+    return "king reaching the center";
+  }
+
+  if (state.capturedPieces[winner].some((p) => p.type === "king" && p.player === opponent)) {
+    return "capturing the opponent's king";
+  }
+
+  if (playerControlsBothTowns(state, winner)) {
+    return "controlling both towns";
+  }
+
+  return "removing every opposing piece from the board";
 }
 
 export function applyMove(
@@ -929,6 +986,10 @@ export function applyPlacement(
 
   if (isCenterTile(to.row, to.col)) {
     throw new Error("You cannot place on the center tile.");
+  }
+
+  if (pieceType === "king" && !isEdgeTile(to.row, to.col)) {
+    throw new Error("The king can only be placed on an edge tile.");
   }
 
   if (state.board[to.row][to.col]) {

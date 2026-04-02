@@ -30,6 +30,7 @@ import {
 const CAPTURE_VALUES: Record<PieceType, number> = {
   commander: 12,
   horse: 6,
+  king: 800,
   pawn: 4,
   sentinel: 8
 };
@@ -49,6 +50,9 @@ const PIECE_SAFETY_WEIGHT = 1;
 const PUSH_PRESSURE_WEIGHT = 34;
 const OPENING_AGGRESSION_WEIGHT = 18;
 const ENDGAME_TOWN_WEIGHT = 220;
+const CAPTURE_THREAT_WEIGHT = 18;
+const SENTINEL_POSITION_WEIGHT = 42;
+const KING_CENTER_DISTANCE_WEIGHT = 300;
 
 const ADJACENT_STEPS: readonly Coordinate[] = [
   { row: 0, col: 1 },
@@ -215,6 +219,27 @@ function countFriendlyAdjacency(state: GameState, square: Coordinate, player: Pl
   return defenders;
 }
 
+function countEnemyAdjacency(state: GameState, square: Coordinate, player: Player): number {
+  const opponent = getOpponent(player);
+  let enemies = 0;
+
+  for (const step of ADJACENT_STEPS) {
+    const row = square.row + step.row;
+    const col = square.col + step.col;
+
+    if (!isInsideBoard(row, col) || isCenterTile(row, col)) {
+      continue;
+    }
+
+    const piece = state.board[row][col];
+    if (piece && piece.player === opponent) {
+      enemies += 1;
+    }
+  }
+
+  return enemies;
+}
+
 function buildAttackMap(state: GameState, player: Player): Map<string, number> {
   const map = new Map<string, number>();
   const moves = getAllLegalMoves(state, player);
@@ -263,6 +288,61 @@ function getPieceSafetyScore(
   }
 
   return safetyScore;
+}
+
+function getCaptureThreatScore(state: GameState, player: Player): number {
+  const strongestThreatBySquare = new Map<string, number>();
+  const legalMoves = getAllLegalMoves(state, player);
+
+  for (const move of legalMoves) {
+    if (move.action !== "move" || !move.capture) {
+      continue;
+    }
+
+    const target = getPiece(state, move.to.row, move.to.col);
+    if (!target) {
+      continue;
+    }
+
+    const key = `${move.to.row},${move.to.col}`;
+    const targetValue = CAPTURE_VALUES[target.type] ?? 0;
+    const currentBest = strongestThreatBySquare.get(key) ?? 0;
+    if (targetValue > currentBest) {
+      strongestThreatBySquare.set(key, targetValue);
+    }
+  }
+
+  let score = 0;
+  for (const value of strongestThreatBySquare.values()) {
+    score += value;
+  }
+
+  return score;
+}
+
+function getSentinelPositionScore(state: GameState, player: Player): number {
+  let score = 0;
+
+  for (let row = 0; row < state.board.length; row += 1) {
+    for (let col = 0; col < state.board[row].length; col += 1) {
+      const piece = state.board[row][col];
+      if (!piece || piece.player !== player || piece.type !== "sentinel") {
+        continue;
+      }
+
+      const square = { row, col };
+      const nearestTownDistance = Math.min(
+        getHexDistance(square, TOWN_POSITIONS[0]),
+        getHexDistance(square, TOWN_POSITIONS[1])
+      );
+
+      score += Math.max(0, 5 - nearestTownDistance) * 4;
+      score += countFriendlyAdjacency(state, square, player) * 3;
+      score += countEnemyAdjacency(state, square, player) * 5;
+    }
+  }
+
+  return score;
 }
 
 function getTownDistanceScore(state: GameState, player: Player): number {
@@ -391,7 +471,7 @@ function getOpeningAggressionScore(state: GameState, player: Player): number {
   }
 
   const reserve = getRemainingReserveCounts(state, player);
-  const reserveFlexibility = reserve.horse * 2 + reserve.sentinel * 2 + reserve.pawn;
+  const reserveFlexibility = reserve.horse * 2 + reserve.sentinel + reserve.pawn;
 
   return activity - reserveFlexibility * Math.floor(moveBias / 3);
 }
@@ -417,6 +497,20 @@ function getEndgameTownDefenseScore(state: GameState, player: Player): number {
   }
 
   return score;
+}
+
+function getKingCenterBonus(state: GameState, player: Player): number {
+  const center = { row: 4, col: 4 };
+  for (let row = 0; row < state.board.length; row += 1) {
+    for (let col = 0; col < state.board[row].length; col += 1) {
+      const piece = state.board[row][col];
+      if (piece?.player === player && piece.type === "king") {
+        const dist = getHexDistance({ row, col }, center);
+        return Math.max(0, 8 - dist);
+      }
+    }
+  }
+  return 0;
 }
 
 function evaluateState(state: GameState, player: Player): number {
@@ -460,6 +554,18 @@ function evaluateState(state: GameState, player: Player): number {
       getPieceSafetyScore(state, opponent, playerAttacks)) *
     PIECE_SAFETY_WEIGHT;
 
+  const captureThreatScore =
+    (getCaptureThreatScore(state, player) - getCaptureThreatScore(state, opponent)) *
+    CAPTURE_THREAT_WEIGHT;
+
+  const sentinelPositionScore =
+    (getSentinelPositionScore(state, player) - getSentinelPositionScore(state, opponent)) *
+    SENTINEL_POSITION_WEIGHT;
+
+  const kingCenterScore =
+    (getKingCenterBonus(state, player) - getKingCenterBonus(state, opponent)) *
+    KING_CENTER_DISTANCE_WEIGHT;
+
   const pushPressureScore =
     (countPushPressure(state, player) - countPushPressure(state, opponent)) *
     PUSH_PRESSURE_WEIGHT;
@@ -481,6 +587,9 @@ function evaluateState(state: GameState, player: Player): number {
     townDistanceScore +
     centerControlScore +
     safetyScore +
+    captureThreatScore +
+    sentinelPositionScore +
+    kingCenterScore +
     pushPressureScore +
     openingScore +
     endgameScore
@@ -508,12 +617,24 @@ function evaluateMoveForOrdering(state: GameState, move: GameAction, rootPlayer:
       getHexDistance(placement.to, TOWN_POSITIONS[0]),
       getHexDistance(placement.to, TOWN_POSITIONS[1])
     );
+    const friendlyAdjacency = countFriendlyAdjacency(state, placement.to, actingPlayer);
+    const enemyAdjacency = countEnemyAdjacency(state, placement.to, actingPlayer);
 
     score += (CAPTURE_VALUES[placement.placeType] ?? 0) * 10;
     if (Number.isFinite(nearEnemyDistance)) {
       score += Math.max(0, 8 - nearEnemyDistance) * 12;
     }
     score += Math.max(0, 8 - townDistance) * 20;
+    score += friendlyAdjacency * 6 + enemyAdjacency * 9;
+
+    if (placement.placeType === "sentinel") {
+      score += Math.max(0, 7 - townDistance) * 40;
+      score += friendlyAdjacency * 16 + enemyAdjacency * 22;
+      if (state.moveNumber <= 10) {
+        score += 110;
+      }
+    }
+
     if (state.moveNumber <= 8 && state.turnPhase === "action") {
       score += 280;
     }
@@ -523,9 +644,9 @@ function evaluateMoveForOrdering(state: GameState, move: GameAction, rootPlayer:
     if (moveAction.capture) {
       const target = getPiece(state, moveAction.to.row, moveAction.to.col);
       if (target) {
-        score += 500 + (CAPTURE_VALUES[target.type] ?? 0) * 40;
+        score += 560 + (CAPTURE_VALUES[target.type] ?? 0) * 46;
       } else {
-        score += 450;
+        score += 500;
       }
     }
 

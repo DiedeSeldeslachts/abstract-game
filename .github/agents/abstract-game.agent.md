@@ -20,7 +20,7 @@ Your job is to translate game ideas into playable, maintainable implementations 
 - Preserve determinism: game outcomes should depend only on current state and player actions.
 - Add lightweight tests or validation scripts for core rules when practical.
 - Avoid broad refactors unrelated to the current feature.
-- When in doubt, ask clarifying questions about the game design or user goals before implementing.
+- When questions or rules are unclear or ambiguous, ask clarifying questions about the game design or user goals before implementing.
 - For rule changes, ensure `rules/rules.md` is updated to reflect the new rules clearly and unambiguously.
 - For code changes, ensure all new logic is covered by tests in `tests/game.test.ts` where applicable.
 - When implementing code changes, optimize code and file style for maintainability by an AI agent. 

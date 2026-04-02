@@ -55,6 +55,10 @@
                 <span class="reserve-symbol">♘</span>
                 <span>Place Horse</span>
               </button>
+              <button class="reserve-button" type="button" data-place-type="king">
+                <span class="reserve-symbol">👑</span>
+                <span>Place King</span>
+              </button>
               <button class="reserve-button" type="button" data-place-type="sentinel">
                 <span class="reserve-symbol">♖</span>
                 <span>Place Sentinel</span>
@@ -93,6 +97,10 @@
               <strong id="white-reserve-horse"></strong>
             </div>
             <div class="metric-row">
+              <span>White King</span>
+              <strong id="white-reserve-king"></strong>
+            </div>
+            <div class="metric-row">
               <span>White Sentinels</span>
               <strong id="white-reserve-sentinel"></strong>
             </div>
@@ -103,6 +111,10 @@
             <div class="metric-row">
               <span>Black Horses</span>
               <strong id="black-reserve-horse"></strong>
+            </div>
+            <div class="metric-row">
+              <span>Black King</span>
+              <strong id="black-reserve-king"></strong>
             </div>
             <div class="metric-row">
               <span>Black Sentinels</span>
@@ -129,11 +141,11 @@
               <li>Start with one pawn each: White on c5, Black on g5.</li>
               <li>Each turn: either move one on-board piece or place one reserve piece.</li>
               <li>Placement is legal on empty non-town hexes only.</li>
-              <li>Reserve limits per player: 5 pawns, 2 horses, 2 sentinels.</li>
+              <li>Reserve limits per player: 5 pawns, 2 horses, 2 sentinels, 1 king.</li>
               <li>Most pieces move one adjacent hex.</li>
               <li>Horses move one or two hexes in a straight line.</li>
               <li>Pawns adjacent to a commander may hop over one friendly adjacent piece.</li>
-              <li>You win by controlling both towns OR eliminating all enemy pieces.</li>
+              <li>You win by controlling both towns, eliminating all enemy pieces, moving your king to the center tile (e5), or capturing the opponent's king.</li>
             </ul>
           </section>
         </aside>

@@ -18,26 +18,28 @@ through one full opponent turn.
 
 - 1 hexagonal board (radius 4, 61 tiles total)
 - Tile colors: 60 playable tiles divided equally among 4 colors — **green**, **blue**, **yellow**, and **brown** (15 tiles each)
-- 1 center tile (e5) — white, impassable; no piece may enter or be placed on it
+- 1 center tile (e5) — white, only kings may enter; no other piece may enter or be placed on it
 - 2 town squares at c5 and g5
 - White pieces:
   - 1 starting pawn (already on c5)
-  - Reserve pool: 5 pawns, 2 horses, 2 sentinels
+  - Reserve pool: 5 pawns, 2 horses, 2 sentinels, 1 king
 - Black pieces:
   - 1 starting pawn (already on g5)
-  - Reserve pool: 5 pawns, 2 horses, 2 sentinels
+  - Reserve pool: 5 pawns, 2 horses, 2 sentinels, 1 king
 
 ## Objective
 
-Win by either:
+Win by any of the following:
 
 1. Capturing every opposing piece, or
-2. Starting your turn while controlling both towns (c5 and g5).
+2. Starting your turn while controlling both towns (c5 and g5), or
+3. Moving your king onto the center tile (e5), or
+4. Capturing the opponent's king.
 
 ## Setup
 
 1. Place the board between both players.
-2. Mark c5 and g5 as town squares. Mark e5 as the center tile (impassable).
+2. Mark c5 and g5 as town squares. Mark e5 as the center tile (king only).
 3. Place one white pawn on c5.
 4. Place one black pawn on g5.
 5. Keep all other pieces in each player's reserve.
@@ -65,7 +67,7 @@ If a player has no legal moves available during the 2nd move, the 2nd move is sk
 Global rules:
 
 - You may not move off-board.
-- You may not move onto the center tile (e5). No piece may enter or be placed on it.
+- Only a king may move onto or be placed on the center tile (e5). All other pieces are blocked from entering it.
 - You may not move onto a square occupied by a friendly piece.
 - Captures happen on the 1st move only, by moving onto an enemy-occupied square.
 - **Capture tile-color rule:** a capture is legal only if there is a tile of the same color as the capturing piece's starting tile on the capture line in the movement direction (this may be before the target, on the target, or beyond the target). If no such same-color tile exists on that line, the capture is not allowed.
@@ -87,6 +89,7 @@ Reserve placement limits (per player):
 - Pawn: up to 5 placements
 - Horse: up to 2 placements
 - Sentinel: up to 2 placements
+- King: up to 1 placement; may only be placed on an edge tile (outermost ring of the board)
 
 Piece movement rules:
 
@@ -94,6 +97,7 @@ Piece movement rules:
 - Horses move one or two squares in one straight direction (orthogonal or diagonal).
 - For a two-square horse move, the intermediate square must be empty and not the center tile.
 - Sentinels cannot move. They occupy a square but have no legal move actions.
+- Kings move exactly one square to any adjacent square, the same as commanders. Kings are the only pieces that may enter the center tile (e5).
 
 Commander aura rule:
 
@@ -125,7 +129,7 @@ Pawn 2nd move rule:
 - Town squares are not legal placement squares.
 - The center tile (e5) is impassable. No piece may move onto it or be placed on it.
 - No tile color applies to the center tile; it is always white and cannot be used as a starting or stopping tile for pawn slides.
-- The capture tile-color rule applies to all captures on the 1st move: single-step, horse, pawn slide, and commander aura hops.
+- The capture tile-color rule applies to all captures on the 1st move: single-step, horse, pawn slide, and commander aura hops. This includes king captures.
 - There is no check or checkmate.
 - There is no castling.
 - There is no promotion.
@@ -139,19 +143,27 @@ Pawn 2nd move rule:
 - If a player has no legal 1st move actions, they may not skip it; but if the board and reserve both yield no valid action, the game is considered stuck (draw by stalemate is not formally defined in the current rules).
 - If a player has no legal 2nd move actions, the 2nd move is skipped.
 - A player may also choose to skip the 2nd move even when legal 2nd move actions exist.
+- The king may only be placed once per player (reserve limit 1). It cannot be placed on a town square. It can only be placed on an edge tile (a tile in the outermost ring at hex distance 4 from the center).
+- The king's win condition (reaching the center tile) triggers immediately when the king occupies e5, including during the 2nd move (push phase).
+- A king cannot be pushed onto the center tile; only voluntary movement to the center is allowed.
+- If a player loses their king, they lose immediately regardless of other pieces on the board.
 
 ## End of Game
 
-The game ends immediately when either condition is met:
- One player has no pieces left on the board.
+The game ends immediately when any of the following conditions is met:
+1. One player has no pieces left on the board.
 2. A player's turn begins while that player still controls both towns.
+3. A king occupies the center tile (e5) (immediately, any time during any phase).
+4. A king is captured (immediately).
 
 ## Winning
 
-You win if either becomes true:
+You win if any of the following becomes true:
 
 1. The opponent has zero on-board pieces remaining, or
-2. Your turn begins and you occupy both c5 and g5.
+2. Your turn begins and you occupy both c5 and g5, or
+3. Your king steps onto the center tile (e5), or
+4. You capture the opponent's king.
 
 If you occupy both towns during your action, you do not win immediately.
 You must still occupy both towns when your next turn begins.
@@ -195,9 +207,14 @@ It passes through green and yellow tiles freely, stopping only on tiles it encou
 (or on the first red enemy piece in that direction).
 If no blue tile (or enemy piece) is reachable in a given direction, the pawn may not move that way.
 
-## Revision Notes
+### Example 7: King wins by reaching center
+
+White king on d5. White moves the king one step to e5 (the center tile).
+White wins immediately — the game ends as soon as the king enters the center.
 
 - Replaced full-army starting setup with minimal setup: one white pawn on c5 and one black pawn on g5.
+- Added the king piece: moves one step in any direction, wins by reaching a town, loses when captured.
+- King win condition changed: king wins by reaching the center tile (e5), not a town square. Center tile is now enterable only by kings.
 - Moved the right-side town one tile to the right: f5 -> g5.
 - Added dual-action turn structure: move one piece or place one reserve piece.
 - Added reserve placement limits per player: 5 pawns, 2 horses, 2 sentinels.

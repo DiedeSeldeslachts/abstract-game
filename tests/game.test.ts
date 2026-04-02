@@ -12,6 +12,7 @@ import {
   applyPlacement,
   createEmptyState,
   createInitialState,
+  isEdgeTile,
   isInsideBoard,
   getLegalMoves,
   getLegalPlacements,
@@ -386,6 +387,22 @@ function placePiece(
   assert.ok(!(move!.to.row === 4 && move!.to.col === 6));
 })();
 
+(function testAIPrefersSentinelPlacementWhenTownsAreContested(): void {
+  const state = createEmptyState("black");
+
+  placePiece(state, 4, 5, "white", "pawn", "town-threat-a");
+  placePiece(state, 5, 6, "white", "horse", "town-threat-b");
+
+  // Mark the black king as already placed so the AI won't pick it
+  state.placedPieces.black.king = 1;
+
+  const move = chooseAIMove(state, "black");
+
+  assert.ok(move);
+  assert.equal(move!.action, "place");
+  assert.equal(move!.placeType, "sentinel");
+})();
+
 console.log("Kingstep rules validation passed.");
 
 (function testPushPhaseHasPushMovesAndNoCaptures(): void {
@@ -443,4 +460,107 @@ console.log("Kingstep rules validation passed.");
   assert.equal(afterPush.lastAction?.kind, "push");
   assert.equal(afterPush.currentPlayer, "black"); // full turn completed
   assert.equal(afterPush.turnPhase, "action");
+})();
+
+(function testKingMovesOneStepInAnyDirection(): void {
+  const state = createEmptyState("white");
+
+  // Place king at c7 (row 2, col 2) — all 6 adjacent hexes are valid and non-center
+  placePiece(state, 2, 2, "white", "king");
+
+  const moves = getLegalMoves(state, 2, 2);
+
+  // Expect exactly 6 adjacent moves (all open, none blocked by center or edge)
+  assert.equal(moves.length, 6, "king must have exactly 6 adjacent moves");
+})();
+
+(function testKingCanMoveToCenter(): void {
+  const state = createEmptyState("white");
+
+  // Place king adjacent to center at (3,4) = f6
+  placePiece(state, 3, 4, "white", "king");
+
+  const moves = getLegalMoves(state, 3, 4);
+
+  // King must be able to move onto the center tile (4,4)
+  assert.ok(moves.some((m) => m.row === 4 && m.col === 4), "king can move to center tile");
+})();
+
+(function testKingOnCenterWinsImmediately(): void {
+  const state = createEmptyState("white");
+
+  // Place king adjacent to center at (3,4)
+  placePiece(state, 3, 4, "white", "king");
+  // Keep black alive
+  placePiece(state, 8, 8, "black", "pawn", "alive");
+
+  const afterMove = applyMove(state, { row: 3, col: 4 }, { row: 4, col: 4 });
+
+  assert.equal(afterMove.winner, "white", "white wins when king reaches center");
+})();
+
+(function testKingCapturedWinsForOpponent(): void {
+  const state = createEmptyState("black");
+
+  // Black pawn adjacent to white king
+  placePiece(state, 4, 3, "black", "pawn");
+  placePiece(state, 4, 2, "white", "king");
+
+  // Ensure tile color allows the capture
+  const attackerColor = getTileColor(state, 4, 3)!;
+  state.tileColors["4,2"] = attackerColor;
+
+  // Increment pieceCounters so king capture condition fires
+  state.pieceCounters.white.king = 1;
+
+  const afterCapture = applyMove(state, { row: 4, col: 3 }, { row: 4, col: 2 });
+
+  assert.equal(afterCapture.winner, "black", "black wins when white king is captured");
+})();
+
+(function testKingPlacementLimitIsOne(): void {
+  const state = createInitialState();
+
+  // Place white king on an edge tile
+  const afterFirstKing = applyPlacement(state, { row: 0, col: 2 }, "king");
+  const afterPass = applyPassPush(afterFirstKing);
+
+  // Skip past black's turn
+  const afterBlackPass1 = applyPassPush(applyPlacement(afterPass, { row: 8, col: 4 }, "pawn"));
+
+  // White must no longer have king reserves
+  const reserve = getRemainingReserveCounts(afterBlackPass1, "white");
+  assert.equal(reserve.king, 0, "king reserve must be 0 after placing it");
+
+  // Attempt to place a second king on another edge tile — should throw
+  assert.throws(
+    () => applyPlacement(afterBlackPass1, { row: 0, col: 3 }, "king"),
+    /remaining king placements/i
+  );
+})();
+
+(function testKingCannotBePlacedOnNonEdgeTile(): void {
+  const state = createInitialState();
+
+  // (4, 3) = d5 is not an edge tile
+  assert.ok(!isEdgeTile(4, 3), "(4,3) should not be an edge tile");
+  assert.throws(
+    () => applyPlacement(state, { row: 4, col: 3 }, "king"),
+    /edge tile/i
+  );
+})();
+
+(function testKingLegalPlacementsAreAllEdgeTiles(): void {
+  const state = createInitialState();
+  const placements = getLegalPlacements(state, "white").filter((p) => p.placeType === "king");
+
+  assert.ok(placements.length > 0, "king must have legal placements");
+  for (const placement of placements) {
+    assert.ok(isEdgeTile(placement.to.row, placement.to.col), `king placement at (${placement.to.row},${placement.to.col}) must be an edge tile`);
+  }
+})();
+
+(function testKingCannotBePlacedOnTown(): void {
+  const state = createInitialState();
+  assert.throws(() => applyPlacement(state, { row: 4, col: 2 }, "king"), /town square/i);
 })();
