@@ -21,6 +21,7 @@ import {
 
 const ELEMENTS = {
   board:                 document.querySelector("#board"),
+  gameModeSelect:        document.querySelector("#game-mode"),
   statusTurn:            document.querySelector("#status-turn"),
   statusText:            document.querySelector("#status-text"),
   selectionText:         document.querySelector("#selection-text"),
@@ -46,6 +47,7 @@ const ELEMENTS = {
 
 /** Board element exported so the controller can attach event delegation. */
 export const BOARD_ELEMENT = ELEMENTS.board;
+export const GAME_MODE_SELECT = ELEMENTS.gameModeSelect;
 
 /** Reserve buttons exported so the controller can attach event listeners. */
 export const RESERVE_BUTTONS = Array.from(document.querySelectorAll("[data-place-type]"));
@@ -149,6 +151,10 @@ function formatPieceName(piece) {
   return `${titleCase(piece.player)} ${piece.type}`;
 }
 
+function isAIControlledPlayer(player, uiState) {
+  return uiState.gameMode === "vs-ai" && player === "black";
+}
+
 /**
  * Builds the CSS class string for a single hex button.
  *
@@ -243,11 +249,13 @@ function renderBoard(gameState, uiState) {
 }
 
 function renderStatus(gameState, uiState) {
-  const { humanPlayer, selectedSquare, selectedPlacementType, aiThinking } = uiState;
-  const aiPlayer = humanPlayer === "white" ? "black" : "white";
+  const { selectedSquare, selectedPlacementType, aiThinking } = uiState;
+  const currentPlayerIsAI = isAIControlledPlayer(gameState.currentPlayer, uiState);
+
+  ELEMENTS.gameModeSelect.value = uiState.gameMode;
 
   ELEMENTS.statusTurn.textContent =
-    gameState.currentPlayer === aiPlayer
+    currentPlayerIsAI
       ? `${titleCase(gameState.currentPlayer)} (AI)`
       : titleCase(gameState.currentPlayer);
 
@@ -260,12 +268,12 @@ function renderStatus(gameState, uiState) {
   }
 
   if (aiThinking) {
-    ELEMENTS.statusText.textContent = `${titleCase(aiPlayer)} is choosing a move...`;
+    ELEMENTS.statusText.textContent = `${titleCase(gameState.currentPlayer)} is choosing a move...`;
     return;
   }
 
   if (selectedPlacementType) {
-    ELEMENTS.statusText.textContent = `${titleCase(humanPlayer)} is placing a ${selectedPlacementType}. Placement is legal on empty non-town hexes only.`;
+    ELEMENTS.statusText.textContent = `${titleCase(gameState.currentPlayer)} is placing a ${selectedPlacementType}. Placement is legal on empty non-town hexes only.`;
     return;
   }
 
@@ -355,7 +363,7 @@ function renderLastAction(gameState) {
 }
 
 function renderReservePanel(gameState, uiState) {
-  const { humanPlayer, selectedPlacementType, aiThinking, transformChoicePending } = uiState;
+  const { selectedPlacementType, aiThinking, transformChoicePending } = uiState;
   const white = getRemainingReserveCounts(gameState, "white");
   const black = getRemainingReserveCounts(gameState, "black");
 
@@ -372,12 +380,12 @@ function renderReservePanel(gameState, uiState) {
     gameState.winner !== null ||
     aiThinking ||
     transformChoicePending ||
-    gameState.currentPlayer !== humanPlayer ||
+    isAIControlledPlayer(gameState.currentPlayer, uiState) ||
     gameState.turnPhase === "push";
 
   for (const button of RESERVE_BUTTONS) {
     const pieceType = button.dataset.placeType;
-    const reserveLeft = getRemainingReserveCounts(gameState, humanPlayer)[pieceType];
+    const reserveLeft = getRemainingReserveCounts(gameState, gameState.currentPlayer)[pieceType];
     button.classList.toggle("is-active", selectedPlacementType === pieceType);
     button.disabled = buttonsBlocked || reserveLeft <= 0;
   }

@@ -112,6 +112,29 @@ h1 {
   gap: 16px;
 }
 
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mode-select-label {
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.mode-select {
+  min-height: 44px;
+  border-radius: 999px;
+  border: 1px solid rgba(75, 37, 25, 0.24);
+  background: rgba(255, 251, 242, 0.94);
+  color: var(--ink);
+  font: inherit;
+  padding: 0 14px;
+}
+
 .turn-pill,
 .secondary-button {
   display: inline-flex;
@@ -322,7 +345,6 @@ h1 {
 }
 
 .hex.is-town {
-  background: color-mix(in srgb, #d4b84a 60%, rgba(255, 214, 111, 0.5)) !important;
   color: #201718;
 }
 
@@ -535,6 +557,16 @@ h1 {
   .board-toolbar {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .toolbar-actions {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .mode-select {
+    width: 100%;
   }
 
   .secondary-button {

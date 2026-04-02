@@ -26,9 +26,16 @@
               <p id="status-turn" class="turn-pill"></p>
             </div>
 
-            <button id="restart-button" class="secondary-button" type="button">
-              Restart
-            </button>
+            <div class="toolbar-actions">
+              <label class="mode-select-label" for="game-mode">Mode</label>
+              <select id="game-mode" class="mode-select" aria-label="Game mode">
+                <option value="vs-ai" selected>Play vs AI</option>
+                <option value="vs-player">2 Players</option>
+              </select>
+              <button id="restart-button" class="secondary-button" type="button">
+                Restart
+              </button>
+            </div>
           </div>
 
           <p id="status-text" class="status-text"></p>
