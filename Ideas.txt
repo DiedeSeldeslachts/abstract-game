@@ -6,4 +6,8 @@ on the tiles you will have randomised resources/points of interest to capture/pr
 pawns are weaker, but can gather stuff from the map
 The more army is destroyed the more you can do off the board, maybe you have to pledge the pieces somewhere to gain benefits somewhere else (call it "deplomacy" or whatever)
 
+Simultanious play next to the board? card played decides order on the strategy board (this could be combined with the concordia style cards)
+
 Call a game "I would steal the stars, if you like their shine" or just "I would steal the stars"
+
+maybe commanders should not be able to move?
