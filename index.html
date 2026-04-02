@@ -55,6 +55,10 @@
                 <span class="reserve-symbol">♘</span>
                 <span>Place Horse</span>
               </button>
+              <button class="reserve-button" type="button" data-place-type="commander">
+                <span class="reserve-symbol">♕</span>
+                <span>Place Commander</span>
+              </button>
               <button class="reserve-button" type="button" data-place-type="king">
                 <span class="reserve-symbol">👑</span>
                 <span>Place King</span>
@@ -105,6 +109,10 @@
               <strong id="white-reserve-sentinel"></strong>
             </div>
             <div class="metric-row">
+              <span>White Commander</span>
+              <strong id="white-reserve-commander"></strong>
+            </div>
+            <div class="metric-row">
               <span>Black Pawns</span>
               <strong id="black-reserve-pawn"></strong>
             </div>
@@ -120,13 +128,17 @@
               <span>Black Sentinels</span>
               <strong id="black-reserve-sentinel"></strong>
             </div>
+            <div class="metric-row">
+              <span>Black Commander</span>
+              <strong id="black-reserve-commander"></strong>
+            </div>
           </section>
 
           <section class="card">
             <h2>Selection</h2>
             <p id="selection-text" class="support-text"></p>
             <button id="pass-push-button" class="secondary-button pass-push-button" type="button">
-              Skip 2nd Move
+              End Bonus Moves
             </button>
           </section>
 
@@ -141,10 +153,10 @@
               <li>Start with one pawn each: White on c5, Black on g5.</li>
               <li>Each turn: either move one on-board piece or place one reserve piece.</li>
               <li>Placement is legal on empty non-town hexes only.</li>
-              <li>Reserve limits per player: 5 pawns, 2 horses, 2 sentinels, 1 king.</li>
+              <li>Reserve limits per player: 5 pawns, 2 horses, 2 sentinels, 2 commanders, 1 king.</li>
               <li>Most pieces move one adjacent hex.</li>
               <li>Horses move one or two hexes in a straight line.</li>
-              <li>Pawns adjacent to a commander may hop over one friendly adjacent piece.</li>
+              <li>Each commander you control grants one extra non-capturing move action that can push.</li>
               <li>You win by controlling both towns, eliminating all enemy pieces, moving your king to the center tile (e5), or capturing the opponent's king.</li>
             </ul>
           </section>

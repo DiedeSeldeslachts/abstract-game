@@ -38,10 +38,12 @@ interface ElementCache {
   whiteReserveHorse: HTMLElement;
   whiteReserveKing: HTMLElement;
   whiteReserveSentinel: HTMLElement;
+  whiteReserveCommander: HTMLElement;
   blackReservePawn: HTMLElement;
   blackReserveHorse: HTMLElement;
   blackReserveKing: HTMLElement;
   blackReserveSentinel: HTMLElement;
+  blackReserveCommander: HTMLElement;
 }
 
 const ELEMENTS: ElementCache = {
@@ -60,10 +62,12 @@ const ELEMENTS: ElementCache = {
   whiteReserveHorse: document.querySelector("#white-reserve-horse")!,
   whiteReserveKing: document.querySelector("#white-reserve-king")!,
   whiteReserveSentinel: document.querySelector("#white-reserve-sentinel")!,
+  whiteReserveCommander: document.querySelector("#white-reserve-commander")!,
   blackReservePawn: document.querySelector("#black-reserve-pawn")!,
   blackReserveHorse: document.querySelector("#black-reserve-horse")!,
   blackReserveKing: document.querySelector("#black-reserve-king")!,
-  blackReserveSentinel: document.querySelector("#black-reserve-sentinel")!
+  blackReserveSentinel: document.querySelector("#black-reserve-sentinel")!,
+  blackReserveCommander: document.querySelector("#black-reserve-commander")!
 };
 
 /** Board element exported so the controller can attach event delegation. */
@@ -220,11 +224,11 @@ function renderStatus(gameState: GameState, uiState: UIState): void {
   }
 
   if (gameState.turnPhase === "push") {
-    ELEMENTS.statusText.textContent = `${titleCase(gameState.currentPlayer)}'s 2nd move: move, push, or skip this move (no captures).`;
+    ELEMENTS.statusText.textContent = `${titleCase(gameState.currentPlayer)} has ${gameState.extraMovesRemaining} commander bonus ${gameState.extraMovesRemaining === 1 ? "move" : "moves"} left: move, push, or end turn (no captures).`;
     return;
   }
 
-  ELEMENTS.statusText.textContent = `${titleCase(gameState.currentPlayer)} to act. 1st move: move or capture, or place a reserve piece. 2nd move will follow.`;
+  ELEMENTS.statusText.textContent = `${titleCase(gameState.currentPlayer)} to act. Choose one action: move/capture or place a reserve piece.`;
 }
 
 function renderSidebar(gameState: GameState, uiState: UIState): void {
@@ -252,10 +256,10 @@ function renderSidebar(gameState: GameState, uiState: UIState): void {
     ELEMENTS.selectionText.textContent = `${formatPieceName(piece!)} on ${toAlgebraic(selectedSquare)} has ${total} legal ${total === 1 ? "move" : "moves"}${phaseHint}.`;
   } else if (gameState.turnPhase === "push") {
     ELEMENTS.selectionText.textContent =
-      "2nd move: select a piece to move or push, or use Skip 2nd Move. No captures allowed.";
+      "Commander bonus phase: select a piece to move or push, or use End Bonus Moves. No captures allowed.";
   } else {
     ELEMENTS.selectionText.textContent =
-      "Choose to move a piece or place one reserve unit, then select a legal target hex.";
+      "Choose to move/capture with a piece or place one reserve unit, then select a legal target hex.";
   }
 
   renderLastAction(gameState);
@@ -270,7 +274,7 @@ function renderLastAction(gameState: GameState): void {
   }
 
   if (action.kind === "pass") {
-    ELEMENTS.lastActionText.textContent = `${titleCase(action.player)} passed the 2nd move.`;
+    ELEMENTS.lastActionText.textContent = `${titleCase(action.player)} ended their remaining commander bonus moves.`;
     return;
   }
 
@@ -306,10 +310,12 @@ function renderReservePanel(gameState: GameState, uiState: UIState): void {
   ELEMENTS.whiteReserveHorse.textContent = String(white.horse);
   ELEMENTS.whiteReserveKing.textContent = String(white.king);
   ELEMENTS.whiteReserveSentinel.textContent = String(white.sentinel);
+  ELEMENTS.whiteReserveCommander.textContent = String(white.commander);
   ELEMENTS.blackReservePawn.textContent = String(black.pawn);
   ELEMENTS.blackReserveHorse.textContent = String(black.horse);
   ELEMENTS.blackReserveKing.textContent = String(black.king);
   ELEMENTS.blackReserveSentinel.textContent = String(black.sentinel);
+  ELEMENTS.blackReserveCommander.textContent = String(black.commander);
 
   const buttonsBlocked =
     gameState.winner !== null ||

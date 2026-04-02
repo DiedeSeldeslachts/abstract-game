@@ -34,8 +34,9 @@ export const TOWN_POSITIONS: readonly Coordinate[] = [
 ];
 export const CENTER_POSITION: Coordinate = { row: HEX_RADIUS, col: HEX_RADIUS }; // e5
 const UNIT_TYPES: readonly PieceType[] = ["commander", "horse", "king", "pawn", "sentinel"];
-const PLACEABLE_TYPES: readonly PlaceableType[] = ["pawn", "horse", "king", "sentinel"];
+const PLACEABLE_TYPES: readonly PlaceableType[] = ["commander", "pawn", "horse", "king", "sentinel"];
 export const PLACEMENT_LIMITS: Record<PlaceableType, number> = {
+  commander: 2,
   pawn: 5,
   horse: 2,
   king: 1,
@@ -205,109 +206,23 @@ function getSingleStepMovesForPlayer(
   return moves;
 }
 
-function hasAdjacentFriendlyCommander(
-  state: GameState,
-  row: number,
-  col: number,
-  player: Player
-): boolean {
-  for (const step of ADJACENT_STEPS) {
-    const commanderRow = row + step.row;
-    const commanderCol = col + step.col;
+function countPiecesOfTypeOnBoard(state: GameState, player: Player, pieceType: PieceType): number {
+  let count = 0;
 
-    if (!isInsideBoard(commanderRow, commanderCol)) {
-      continue;
-    }
-
-    const adjacentPiece = state.board[commanderRow][commanderCol];
-
-    if (
-      adjacentPiece &&
-      adjacentPiece.player === player &&
-      adjacentPiece.type === "commander"
-    ) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-function getCommanderAuraHopMovesForPawn(
-  state: GameState,
-  row: number,
-  col: number,
-  player: Player
-): MoveDestination[] {
-  if (!hasAdjacentFriendlyCommander(state, row, col, player)) {
-    return [];
-  }
-
-  const isPushPhase = state.turnPhase === "push";
-  const moves: MoveDestination[] = [];
-
-  for (const step of ADJACENT_STEPS) {
-    const blockerRow = row + step.row;
-    const blockerCol = col + step.col;
-
-    if (!isInsideBoard(blockerRow, blockerCol)) {
-      continue;
-    }
-
-    const blocker = state.board[blockerRow][blockerCol];
-
-    if (!blocker || blocker.player !== player) {
-      continue;
-    }
-
-    const landingRow = blockerRow + step.row;
-    const landingCol = blockerCol + step.col;
-
-    if (!isEnterableSquare(landingRow, landingCol)) {
-      continue;
-    }
-
-    const target = state.board[landingRow][landingCol];
-
-    if (target && target.player === player) {
-      continue;
-    }
-
-    if (isPushPhase) {
-      if (!target) {
-        moves.push({ row: landingRow, col: landingCol, capture: false });
-      } else {
-        const pushRow = landingRow + step.row;
-        const pushCol = landingCol + step.col;
-        if (isEnterableSquare(pushRow, pushCol) && !state.board[pushRow][pushCol]) {
-          moves.push({
-            row: landingRow,
-            col: landingCol,
-            capture: false,
-            push: true,
-            pushTo: { row: pushRow, col: pushCol }
-          });
-        }
-      }
-    } else {
-      // Check if target exists and is capturable
-      if (target && !isCapturablePiece(state, landingRow, landingCol, player)) {
+  for (let row = 0; row < BOARD_ROWS; row += 1) {
+    for (let col = 0; col < BOARD_COLS; col += 1) {
+      if (!isInsideBoard(row, col)) {
         continue;
       }
 
-      if (target && !isCaptureAllowedByTileColor(state, row, col, landingRow, landingCol, step.row, step.col)) {
-        continue;
+      const piece = state.board[row][col];
+      if (piece && piece.player === player && piece.type === pieceType) {
+        count += 1;
       }
-
-      moves.push({
-        row: landingRow,
-        col: landingCol,
-        capture: Boolean(target)
-      });
     }
   }
 
-  return moves;
+  return count;
 }
 
 function getHorseMovesForPlayer(
@@ -464,10 +379,6 @@ function getLegalMovesForPlayer(
     }
   }
 
-  for (const move of getCommanderAuraHopMovesForPawn(state, row, col, player)) {
-    movesBySquare.set(`${move.row},${move.col}`, move);
-  }
-
   return Array.from(movesBySquare.values());
 }
 
@@ -479,6 +390,7 @@ export function createEmptyState(currentPlayer: Player = "white"): GameState {
     winner: null,
     moveNumber: 1,
     turnPhase: "action",
+    extraMovesRemaining: 0,
     townControlPendingPlayer: null,
     lastAction: null,
     capturedPieces: {
@@ -541,6 +453,7 @@ export function getRemainingReserveCounts(
   player: Player = state.currentPlayer
 ): Record<PlaceableType, number> {
   return {
+    commander: PLACEMENT_LIMITS.commander - state.placedPieces[player].commander,
     pawn: PLACEMENT_LIMITS.pawn - state.placedPieces[player].pawn,
     horse: PLACEMENT_LIMITS.horse - state.placedPieces[player].horse,
     king: PLACEMENT_LIMITS.king - state.placedPieces[player].king,
@@ -796,13 +709,13 @@ function getPawnSlidingMoves(
 }
 
 function createNextStateBase(state: GameState): GameState {
-  const isEndOfTurn = state.turnPhase === "push";
   return {
     ...state,
     board: cloneBoard(state.board),
-    moveNumber: isEndOfTurn ? state.moveNumber + 1 : state.moveNumber,
-    currentPlayer: isEndOfTurn ? getOpponent(state.currentPlayer) : state.currentPlayer,
-    turnPhase: isEndOfTurn ? "action" : "push",
+    moveNumber: state.moveNumber,
+    currentPlayer: state.currentPlayer,
+    turnPhase: state.turnPhase,
+    extraMovesRemaining: state.extraMovesRemaining,
     townControlPendingPlayer: state.townControlPendingPlayer,
     lastAction: null,
     capturedPieces: {
@@ -818,6 +731,38 @@ function createNextStateBase(state: GameState): GameState {
       black: { ...state.placedPieces.black }
     }
   };
+}
+
+function advanceTurnAfterAction(nextState: GameState, previousState: GameState, actingPlayer: Player): void {
+  if (previousState.turnPhase === "action") {
+    const commanderCount = countPiecesOfTypeOnBoard(nextState, actingPlayer, "commander");
+
+    if (commanderCount > 0) {
+      nextState.currentPlayer = actingPlayer;
+      nextState.turnPhase = "push";
+      nextState.extraMovesRemaining = commanderCount;
+      return;
+    }
+
+    nextState.currentPlayer = getOpponent(actingPlayer);
+    nextState.turnPhase = "action";
+    nextState.extraMovesRemaining = 0;
+    nextState.moveNumber += 1;
+    return;
+  }
+
+  const remainingMoves = Math.max(0, previousState.extraMovesRemaining - 1);
+  if (remainingMoves > 0) {
+    nextState.currentPlayer = actingPlayer;
+    nextState.turnPhase = "push";
+    nextState.extraMovesRemaining = remainingMoves;
+    return;
+  }
+
+  nextState.currentPlayer = getOpponent(actingPlayer);
+  nextState.turnPhase = "action";
+  nextState.extraMovesRemaining = 0;
+  nextState.moveNumber += 1;
 }
 
 function resolveWinConditions(
@@ -958,6 +903,7 @@ export function applyMove(
     };
   }
 
+  advanceTurnAfterAction(nextState, state, piece.player);
   resolveWinConditions(nextState, state, piece.player);
 
   return nextState;
@@ -1016,6 +962,7 @@ export function applyPlacement(
     capturedPiece: null
   };
 
+  advanceTurnAfterAction(nextState, state, state.currentPlayer);
   resolveWinConditions(nextState, state, state.currentPlayer);
 
   return nextState;
@@ -1027,7 +974,7 @@ export function toAlgebraic(square: Coordinate): string {
 
 export function applyPassPush(state: GameState): GameState {
   if (state.turnPhase !== "push") {
-    throw new Error("Can only pass during push phase.");
+    throw new Error("Can only pass during the extra move phase.");
   }
 
   const nextState = createNextStateBase(state);
@@ -1040,6 +987,11 @@ export function applyPassPush(state: GameState): GameState {
     to: null,
     capturedPiece: null
   };
+
+  nextState.currentPlayer = getOpponent(state.currentPlayer);
+  nextState.turnPhase = "action";
+  nextState.extraMovesRemaining = 0;
+  nextState.moveNumber += 1;
 
   resolveWinConditions(nextState, state, state.currentPlayer);
 

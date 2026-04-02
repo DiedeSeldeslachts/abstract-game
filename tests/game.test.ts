@@ -71,25 +71,27 @@ function placePiece(
   assert.ok(!placements.some((placement) => placement.to.row === 4 && placement.to.col === 6));
 })();
 
-(function testApplyPlacementAdvancesToPushPhase(): void {
+(function testApplyPlacementEndsTurnWithoutCommander(): void {
   const state = createInitialState();
   const nextState = applyPlacement(state, { row: 0, col: 2 }, "horse");
 
   assert.equal(getPiece(nextState, 0, 2)?.type, "horse");
   assert.equal(getPiece(nextState, 0, 2)?.player, "white");
-  assert.equal(nextState.currentPlayer, "white"); // still white's turn (push phase)
-  assert.equal(nextState.turnPhase, "push");
+  assert.equal(nextState.currentPlayer, "black");
+  assert.equal(nextState.turnPhase, "action");
   assert.equal(nextState.lastAction?.kind, "place");
 })();
 
-(function testCanSkipSecondMoveEvenWhenPushMovesExist(): void {
+(function testCanSkipCommanderGrantedExtraMove(): void {
   const state = createEmptyState("white");
 
+  placePiece(state, 0, 0, "white", "commander", "leader");
   placePiece(state, 4, 3, "white", "horse", "walker");
   placePiece(state, 8, 8, "black", "pawn", "keeper");
   const beforePass = applyMove(state, { row: 4, col: 3 }, { row: 4, col: 2 });
 
   assert.equal(beforePass.turnPhase, "push");
+  assert.equal(beforePass.extraMovesRemaining, 1);
   assert.ok(getLegalMoves(beforePass, 4, 2).length > 0);
 
   const afterPass = applyPassPush(beforePass);
@@ -110,15 +112,13 @@ function placePiece(
 
   // Black places pawn in action phase
   const afterPlacement = applyPlacement(state, { row: 4, col: 5 }, "pawn");
-  // Pass black's push phase to complete the turn
-  const afterBlackTurn = applyPassPush(afterPlacement);
 
   // Now it's white's action phase: white pawn at (5,5) can capture black pawn at (4,5)
-  const whiteMoves = getLegalMoves(afterBlackTurn, 5, 5);
+  const whiteMoves = getLegalMoves(afterPlacement, 5, 5);
 
   assert.ok(whiteMoves.some((move) => move.row === 4 && move.col === 5 && move.capture));
 
-  const afterCapture = applyMove(afterBlackTurn, { row: 5, col: 5 }, { row: 4, col: 5 });
+  const afterCapture = applyMove(afterPlacement, { row: 5, col: 5 }, { row: 4, col: 5 });
 
   assert.equal(afterCapture.lastAction?.kind, "capture");
   assert.equal(afterCapture.lastAction?.capturedPiece?.player, "black");
@@ -150,9 +150,7 @@ function placePiece(
 
   for (let index = 0; index < 5; index += 1) {
     state = applyPlacement(state, whiteSquares[index], "pawn");
-    state = applyPassPush(state); // white push phase → black's turn
     state = applyPlacement(state, blackSquares[index], "pawn");
-    state = applyPassPush(state); // black push phase → white's turn
   }
 
   const whiteReserve = getRemainingReserveCounts(state, "white");
@@ -161,6 +159,27 @@ function placePiece(
   assert.throws(
     () => applyPlacement(state, { row: 2, col: 4 }, "pawn"),
     /remaining pawn placements/i
+  );
+})();
+
+(function testCommanderPlacementLimitIsEnforced(): void {
+  const state = createInitialState();
+
+  const afterFirstCommander = applyPlacement(state, { row: 0, col: 0 }, "commander");
+  const afterWhitePass1 = applyPassPush(afterFirstCommander);
+  const afterBlackMove1 = applyPlacement(afterWhitePass1, { row: 8, col: 8 }, "pawn");
+  const afterSecondCommander = applyPlacement(afterBlackMove1, { row: 0, col: 1 }, "commander");
+
+  const reserve = getRemainingReserveCounts(afterSecondCommander, "white");
+
+  assert.equal(reserve.commander, 0);
+
+  const afterWhitePass2 = applyPassPush(afterSecondCommander);
+  const whiteTurnAgain = applyPlacement(afterWhitePass2, { row: 8, col: 7 }, "pawn");
+
+  assert.throws(
+    () => applyPlacement(whiteTurnAgain, { row: 0, col: 2 }, "commander"),
+    /remaining commander placements/i
   );
 })();
 
@@ -247,21 +266,18 @@ function placePiece(
   assert.deepEqual(moves, ["c5", "c7", "d5", "d6", "e3", "e4", "e6", "e7", "f4", "f5", "g3", "g5"]);
 })();
 
-(function testAdjacentPawnCanHopOverFriendlyPiece(): void {
+(function testCommanderGrantsExtraMoveActionCount(): void {
   const state = createEmptyState("white");
 
   placePiece(state, 4, 4, "white", "commander");
-  placePiece(state, 4, 3, "white", "pawn");
-  placePiece(state, 3, 3, "white", "pawn", "blocker");
-  placePiece(state, 2, 3, "black", "pawn", "target");
+  placePiece(state, 4, 3, "white", "horse", "mover");
+  placePiece(state, 8, 8, "black", "pawn", "alive");
 
-  // Ensure tile colors allow hop capture: set a path tile to match pawn's starting tile color
-  const pawnColor = getTileColor(state, 4, 3)!;
-  state.tileColors["3,3"] = pawnColor;
+  const afterAction = applyMove(state, { row: 4, col: 3 }, { row: 4, col: 2 });
 
-  const moves = getLegalMoves(state, 4, 3);
-
-  assert.ok(moves.some((move) => move.row === 2 && move.col === 3 && move.capture));
+  assert.equal(afterAction.turnPhase, "push");
+  assert.equal(afterAction.currentPlayer, "white");
+  assert.equal(afterAction.extraMovesRemaining, 1);
 })();
 
 (function testEnemyCanCaptureSentinel(): void {
@@ -335,12 +351,10 @@ function placePiece(
 
   // White captures on g5 to occupy both towns.
   const whiteAction = applyMove(state, { row: 3, col: 6 }, { row: 4, col: 6 });
-  // White push phase: pass
-  const afterWhiteTurn = applyPassPush(whiteAction);
+  const afterWhiteTurn = whiteAction;
   // Black performs any legal action that does not break white's town control.
   const blackAction = applyMove(afterWhiteTurn, { row: 8, col: 7 }, { row: 7, col: 7 });
-  // Black push phase: pass (starts white's next turn with both towns)
-  const afterBlackTurn = applyPassPush(blackAction);
+  const afterBlackTurn = blackAction;
 
   assert.equal(afterBlackTurn.currentPlayer, "white");
   assert.equal(afterBlackTurn.winner, "white");
@@ -408,6 +422,7 @@ console.log("Kingstep rules validation passed.");
 (function testPushPhaseHasPushMovesAndNoCaptures(): void {
   const state = createEmptyState("white");
 
+  placePiece(state, 0, 0, "white", "commander", "leader");
   placePiece(state, 4, 2, "white", "pawn", "mover");
   placePiece(state, 3, 2, "black", "pawn", "captured");
   placePiece(state, 4, 3, "black", "pawn", "target");
@@ -432,6 +447,7 @@ console.log("Kingstep rules validation passed.");
 (function testPushMoveDisplacesEnemyPiece(): void {
   const state = createEmptyState("white");
 
+  placePiece(state, 0, 0, "white", "commander", "leader");
   placePiece(state, 4, 2, "white", "pawn", "pusher");
   placePiece(state, 3, 2, "black", "pawn", "captured");
   placePiece(state, 4, 3, "black", "pawn", "pushed");
@@ -523,18 +539,15 @@ console.log("Kingstep rules validation passed.");
 
   // Place white king on an edge tile
   const afterFirstKing = applyPlacement(state, { row: 0, col: 2 }, "king");
-  const afterPass = applyPassPush(afterFirstKing);
-
-  // Skip past black's turn
-  const afterBlackPass1 = applyPassPush(applyPlacement(afterPass, { row: 8, col: 4 }, "pawn"));
+  const afterBlackTurn = applyPlacement(afterFirstKing, { row: 8, col: 4 }, "pawn");
 
   // White must no longer have king reserves
-  const reserve = getRemainingReserveCounts(afterBlackPass1, "white");
+  const reserve = getRemainingReserveCounts(afterBlackTurn, "white");
   assert.equal(reserve.king, 0, "king reserve must be 0 after placing it");
 
   // Attempt to place a second king on another edge tile — should throw
   assert.throws(
-    () => applyPlacement(afterBlackPass1, { row: 0, col: 3 }, "king"),
+    () => applyPlacement(afterBlackTurn, { row: 0, col: 3 }, "king"),
     /remaining king placements/i
   );
 })();

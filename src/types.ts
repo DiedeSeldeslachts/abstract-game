@@ -15,10 +15,10 @@ export type PieceType = "commander" | "horse" | "king" | "pawn" | "sentinel";
 /**
  * Placeable piece types (subset of PieceType that can be placed from reserve)
  */
-export type PlaceableType = "pawn" | "horse" | "king" | "sentinel";
+export type PlaceableType = "commander" | "pawn" | "horse" | "king" | "sentinel";
 
 /**
- * Turn phase - action phase or push phase
+ * Turn phase - primary action or commander-granted extra move phase
  */
 export type TurnPhase = "action" | "push";
 
@@ -134,7 +134,7 @@ export interface LastActionPlace extends LastActionBase {
 }
 
 /**
- * Action record when a player passes push phase
+ * Action record when a player ends the extra move phase early
  */
 export interface LastActionPass extends LastActionBase {
   kind: "pass";
@@ -166,6 +166,7 @@ export interface PieceCounter {
  * Placement counter for a single player (how many of each placeable type have been placed)
  */
 export interface PlacementCounter {
+  commander: number;
   pawn: number;
   horse: number;
   king: number;
@@ -182,6 +183,7 @@ export interface GameState {
   winner: Player | null;
   moveNumber: number;
   turnPhase: TurnPhase;
+  extraMovesRemaining: number;
   townControlPendingPlayer: Player | null;
   lastAction: LastAction;
   capturedPieces: {

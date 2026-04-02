@@ -74,7 +74,7 @@ function isAIControlledPlayer(player: string): boolean {
 }
 
 // ---------------------------------------------------------------------------
-// Auto-pass: if the push phase has no legal moves, pass automatically
+// Auto-pass: if bonus-move phase has no legal moves, end the turn automatically
 // ---------------------------------------------------------------------------
 
 function checkAutoPassPushPhase(): void {
@@ -114,7 +114,7 @@ function performAIMove(): void {
       : applyMove(state, move.from!, move.to);
   clearSelection();
 
-  // AI may have a second move (push phase after action phase)
+  // AI may continue with commander bonus moves
   if (!state.winner && isAIControlledPlayer(state.currentPlayer)) {
     render();
     aiMoveTimer = window.setTimeout(() => {

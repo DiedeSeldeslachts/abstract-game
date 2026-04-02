@@ -22,10 +22,10 @@ through one full opponent turn.
 - 2 town squares at c5 and g5
 - White pieces:
   - 1 starting pawn (already on c5)
-  - Reserve pool: 5 pawns, 2 horses, 2 sentinels, 1 king
+  - Reserve pool: 5 pawns, 2 horses, 2 sentinels, 2 commanders, 1 king
 - Black pieces:
   - 1 starting pawn (already on g5)
-  - Reserve pool: 5 pawns, 2 horses, 2 sentinels, 1 king
+  - Reserve pool: 5 pawns, 2 horses, 2 sentinels, 2 commanders, 1 king
 
 ## Objective
 
@@ -47,20 +47,22 @@ Win by any of the following:
 
 ## Turn Structure
 
-Each turn consists of two sequential moves performed by the same player:
+Each turn starts with one required **main action**, followed by zero or more **commander bonus moves**.
 
-**1st move (action)** — choose one of:
+**Main action** — choose exactly one:
 1. Move one of your on-board pieces to a legal destination. If the destination has an opposing piece, capture it.
-2. Place one piece type from your reserve on any empty square that is not a town square.
+2. Place one piece type from your reserve on any empty square that is not a town square or the center tile.
 
-**2nd move (push)** — choose one of:
-1. Move one of your on-board pieces to an empty destination (no captures).
-2. Push an enemy piece away: move one of your pieces onto an enemy-occupied square. The enemy piece is displaced one square further in the same direction of movement. The destination square for the pushed piece must be empty and on the board. If no such square exists, that push is not a legal option.
-3. Skip the 2nd move voluntarily.
+**Commander bonus moves**:
+1. After the main action resolves, count how many friendly commanders you currently have on the board.
+2. You gain that many bonus move actions this turn.
+3. Each bonus move must be either:
+  - A non-capturing move to an empty square, or
+  - A push (move onto an enemy-occupied square and displace that enemy one square further in the same direction).
+4. You may end your remaining bonus moves early.
+5. If no legal bonus move exists, the turn ends immediately.
 
-After both moves are completed, the turn ends and the opponent takes their turn.
-
-If a player has no legal moves available during the 2nd move, the 2nd move is skipped automatically.
+After all bonus moves are used (or ended), the turn ends and the opponent takes their turn.
 
 ## Actions and Move Rules
 
@@ -69,16 +71,16 @@ Global rules:
 - You may not move off-board.
 - Only a king may move onto or be placed on the center tile (e5). All other pieces are blocked from entering it.
 - You may not move onto a square occupied by a friendly piece.
-- Captures happen on the 1st move only, by moving onto an enemy-occupied square.
+- Captures happen only on the main action, by moving onto an enemy-occupied square.
 - **Capture tile-color rule:** a capture is legal only if there is a tile of the same color as the capturing piece's starting tile on the capture line in the movement direction (this may be before the target, on the target, or beyond the target). If no such same-color tile exists on that line, the capture is not allowed.
-- Placement never captures and is only available on the 1st move.
+- Placement never captures and is only available as the main action.
 - Pieces may not be placed on town squares or on the center tile.
-- The 2nd move cannot capture; it can only move to empty squares or push enemy pieces.
-- A player may voluntarily skip the 2nd move, even if legal push/move options exist.
+- Commander bonus moves cannot capture; they can only move to empty squares or push enemy pieces.
+- A player may voluntarily end their remaining commander bonus moves, even if legal bonus moves exist.
 
 Push rules:
 
-- A push is initiated by moving onto an enemy-occupied square on the 2nd move.
+- A push is initiated by moving onto an enemy-occupied square during a commander bonus move.
 - The push direction is the direction of your piece's movement.
 - The enemy piece is displaced one square further in that same direction.
 - The displaced position must be empty and on the board. Otherwise the push is not legal.
@@ -86,6 +88,7 @@ Push rules:
 
 Reserve placement limits (per player):
 
+- Commander: up to 2 placements
 - Pawn: up to 5 placements
 - Horse: up to 2 placements
 - Sentinel: up to 2 placements
@@ -99,29 +102,27 @@ Piece movement rules:
 - Sentinels cannot move. They occupy a square but have no legal move actions.
 - Kings move exactly one square to any adjacent square, the same as commanders. Kings are the only pieces that may enter the center tile (e5).
 
-Commander aura rule:
+Commander bonus move rule:
 
-- A pawn adjacent to at least one friendly commander gains hop options.
-- A hop moves two squares in one adjacent direction.
-- The first square in that direction must contain a friendly piece to hop over.
-- The landing square must be on-board, not the center tile, and not occupied by a friendly piece.
-- The landing square may be empty or enemy-occupied (capture).
+- Each friendly commander on the board grants one commander bonus move each turn.
+- This bonus is counted after your main action resolves.
+- Bonus moves are non-capturing and may include pushes.
 
-Commanders themselves move one square and do not hop.
+Commanders themselves move one square.
 
-Pawn sliding rule (1st move):
+Pawn sliding rule (main action):
 
-- On the 1st move of a turn, a pawn may slide any number of squares in a single direction.
+- On the main action, a pawn may slide any number of squares in a single direction.
 - The pawn must stop on a tile whose **color matches the pawn's starting tile color**.
 - If the pawn encounters an enemy piece, a capture is only allowed if the capture tile-color rule is satisfied: there must be a tile matching the pawn's starting tile color on that same slide line (before the enemy, on the enemy tile, or beyond the enemy). If the rule is not satisfied, the pawn is still blocked and cannot slide further, but no capture occurs.
 - If a friendly piece blocks the path, the pawn may not pass through it.
 - If no valid stopping tile exists in a given direction, the pawn may not move in that direction.
 - A pawn that starts on the center tile (normally impossible in play) cannot slide in any direction.
 
-Pawn 2nd move rule:
+Pawn commander bonus move rule:
 
-- On the 2nd move of a turn (push phase), a pawn moves exactly **one step** to an adjacent empty square or pushes an adjacent enemy piece.
-- The tile color rule does **not** apply on the 2nd move.
+- During commander bonus moves, a pawn moves exactly **one step** to an adjacent empty square or pushes an adjacent enemy piece.
+- The tile color rule does **not** apply during commander bonus moves.
 
 ## Special Rules and Edge Cases
 
@@ -129,22 +130,20 @@ Pawn 2nd move rule:
 - Town squares are not legal placement squares.
 - The center tile (e5) is impassable. No piece may move onto it or be placed on it.
 - No tile color applies to the center tile; it is always white and cannot be used as a starting or stopping tile for pawn slides.
-- The capture tile-color rule applies to all captures on the 1st move: single-step, horse, pawn slide, and commander aura hops. This includes king captures.
+- The capture tile-color rule applies to all captures on the main action: single-step, horse, and pawn slide. This includes king captures.
 - There is no check or checkmate.
 - There is no castling.
 - There is no promotion.
 - There is no en passant.
 - No piece has a forward-only rule; movement is adjacent in all directions.
 - Horses are the only pieces that can move two squares in a straight line.
-- A pawn only needs one adjacent friendly commander to unlock hop moves.
-- Commander hop moves are not restricted by tile color, even on the 1st move.
-- Pawn tile color rule applies only on the 1st move. On the 2nd move, pawns move one step freely.
-- A piece placed on the 1st move can be captured normally by the opponent on their next 1st move; placement grants no capture immunity.
-- If a player has no legal 1st move actions, they may not skip it; but if the board and reserve both yield no valid action, the game is considered stuck (draw by stalemate is not formally defined in the current rules).
-- If a player has no legal 2nd move actions, the 2nd move is skipped.
-- A player may also choose to skip the 2nd move even when legal 2nd move actions exist.
+- Pawn tile color rule applies only on the main action. During commander bonus moves, pawns move one step freely.
+- A piece placed on the main action can be captured normally by the opponent on their next main action; placement grants no capture immunity.
+- If a player has no legal main actions, they may not skip it; but if the board and reserve both yield no valid action, the game is considered stuck (draw by stalemate is not formally defined in the current rules).
+- If a player has no legal commander bonus moves, the turn ends immediately.
+- A player may also end commander bonus moves early even when legal bonus moves exist.
 - The king may only be placed once per player (reserve limit 1). It cannot be placed on a town square. It can only be placed on an edge tile (a tile in the outermost ring at hex distance 4 from the center).
-- The king's win condition (reaching the center tile) triggers immediately when the king occupies e5, including during the 2nd move (push phase).
+- The king's win condition (reaching the center tile) triggers immediately when the king occupies e5, including during commander bonus moves.
 - A king cannot be pushed onto the center tile; only voluntary movement to the center is allowed.
 - If a player loses their king, they lose immediately regardless of other pieces on the board.
 
@@ -181,24 +180,24 @@ White's remaining horse placements decrease by one.
 Black cannot place a sentinel directly on c5 or g5,
 even if the town square is empty. Black also cannot place on e5 (the center tile).
 
-### Example 3: Commander aura hop
+### Example 3: Commander bonus move count
 
-White commander on d5, white pawn on c5, white pawn on b5.
-Because c5 is adjacent to a commander, the pawn on c5 may hop over b5 to a5,
-if a5 is not occupied by a white piece. The destination tile color is irrelevant for hops.
+White controls two commanders at the end of the main action.
+White therefore gets two commander bonus moves this turn.
+Both bonus moves must be non-capturing moves or legal pushes.
 
 ### Example 4: Town control and full turn
 
-White occupies both c5 and g5 at the end of White's full turn (after both the 1st and 2nd moves).
+White occupies both c5 and g5 at the end of White's full turn (after the main action and all bonus moves).
 White creates pending town control.
 White wins only if both towns are still white-occupied when White's next full turn begins.
 
-### Example 5: Push on the 2nd move
+### Example 5: Push on a commander bonus move
 
 White pawn on d5, Black pawn on e4, f3 is empty.
-On White's 2nd move, White moves the pawn from d5 one step toward e4.
+On White's commander bonus move, White moves the pawn from d5 one step toward e4.
 The Black pawn on e4 is pushed to f3. White's pawn occupies e4. No piece is captured.
-The tile color rule does not apply on the 2nd move; the pawn moves exactly one step.
+The tile color rule does not apply on commander bonus moves; the pawn moves exactly one step.
 
 ### Example 6: Pawn slide and tile color
 
@@ -211,6 +210,12 @@ If no blue tile (or enemy piece) is reachable in a given direction, the pawn may
 
 White king on d5. White moves the king one step to e5 (the center tile).
 White wins immediately — the game ends as soon as the king enters the center.
+
+## Revision Notes
+
+- Added commander to placeable reserve pieces: each player may now place up to 2 commanders.
+- Replaced pawn commander aura hops with commander bonus moves: each friendly commander grants one extra non-capturing move action (push allowed) after the main action.
+- Removed fixed two-step turn structure. Turns now consist of one main action plus zero or more commander bonus moves.
 
 - Replaced full-army starting setup with minimal setup: one white pawn on c5 and one black pawn on g5.
 - Added the king piece: moves one step in any direction, wins by reaching a town, loses when captured.
