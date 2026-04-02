@@ -54,6 +54,7 @@ Each turn consists of two sequential moves performed by the same player:
 **2nd move (push)** — choose one of:
 1. Move one of your on-board pieces to an empty destination (no captures).
 2. Push an enemy piece away: move one of your pieces onto an enemy-occupied square. The enemy piece is displaced one square further in the same direction of movement. The destination square for the pushed piece must be empty and on the board. If no such square exists, that push is not a legal option.
+3. Skip the 2nd move voluntarily.
 
 After both moves are completed, the turn ends and the opponent takes their turn.
 
@@ -71,6 +72,7 @@ Global rules:
 - Placement never captures and is only available on the 1st move.
 - Pieces may not be placed on town squares or on the center tile.
 - The 2nd move cannot capture; it can only move to empty squares or push enemy pieces.
+- A player may voluntarily skip the 2nd move, even if legal push/move options exist.
 
 Push rules:
 
@@ -136,6 +138,7 @@ Pawn 2nd move rule:
 - A piece placed on the 1st move can be captured normally by the opponent on their next 1st move; placement grants no capture immunity.
 - If a player has no legal 1st move actions, they may not skip it; but if the board and reserve both yield no valid action, the game is considered stuck (draw by stalemate is not formally defined in the current rules).
 - If a player has no legal 2nd move actions, the 2nd move is skipped.
+- A player may also choose to skip the 2nd move even when legal 2nd move actions exist.
 
 ## End of Game
 
@@ -204,6 +207,7 @@ If no blue tile (or enemy piece) is reachable in a given direction, the pawn may
 - Removed sentinel protection rule: pawns adjacent to sentinels are no longer protected from capture.
 - Clarified that newly placed pieces are immediately capturable on the opponent's next turn.
 - Changed turn structure to two sequential moves per turn: 1st move (action: move/capture or place), 2nd move (push: move to empty square or push enemy piece away, no captures). The 2nd move is skipped automatically if no legal options exist.
+- Updated 2nd move behavior: players may now voluntarily skip the 2nd move; auto-skip still applies when no legal 2nd move options exist.
 - Added tile colors: every playable tile has one of 4 colors (green, blue, yellow, brown), 15 tiles each.
 - Added center tile rule: e5 is white and impassable — no piece may enter or be placed on it.
 - Added capture tile-color rule: on the 1st move, a piece can only capture an enemy if there is a tile of the same color as the capturing piece's starting tile along the movement path to the target (inclusive). This applies to all capture types: single-step, horse, pawn slide, and commander aura hops.

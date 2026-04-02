@@ -25,6 +25,7 @@ import {
 interface ElementCache {
   board: HTMLElement;
   gameModeSelect: HTMLSelectElement;
+  passPushButton: HTMLButtonElement;
   statusTurn: HTMLElement;
   statusText: HTMLElement;
   selectionText: HTMLElement;
@@ -44,6 +45,7 @@ interface ElementCache {
 const ELEMENTS: ElementCache = {
   board: document.querySelector("#board")!,
   gameModeSelect: document.querySelector("#game-mode")!,
+  passPushButton: document.querySelector("#pass-push-button")!,
   statusTurn: document.querySelector("#status-turn")!,
   statusText: document.querySelector("#status-text")!,
   selectionText: document.querySelector("#selection-text")!,
@@ -63,6 +65,7 @@ const ELEMENTS: ElementCache = {
 /** Board element exported so the controller can attach event delegation. */
 export const BOARD_ELEMENT = ELEMENTS.board;
 export const GAME_MODE_SELECT = ELEMENTS.gameModeSelect;
+export const PASS_PUSH_BUTTON = ELEMENTS.passPushButton;
 
 /** Reserve buttons exported so the controller can attach event listeners. */
 export const RESERVE_BUTTONS = Array.from(document.querySelectorAll("[data-place-type]"));
@@ -216,7 +219,7 @@ function renderStatus(gameState: GameState, uiState: UIState): void {
   }
 
   if (gameState.turnPhase === "push") {
-    ELEMENTS.statusText.textContent = `${titleCase(gameState.currentPlayer)}'s 2nd move: move a piece or push an enemy piece away (no captures).`;
+    ELEMENTS.statusText.textContent = `${titleCase(gameState.currentPlayer)}'s 2nd move: move, push, or skip this move (no captures).`;
     return;
   }
 
@@ -248,7 +251,7 @@ function renderSidebar(gameState: GameState, uiState: UIState): void {
     ELEMENTS.selectionText.textContent = `${formatPieceName(piece!)} on ${toAlgebraic(selectedSquare)} has ${total} legal ${total === 1 ? "move" : "moves"}${phaseHint}.`;
   } else if (gameState.turnPhase === "push") {
     ELEMENTS.selectionText.textContent =
-      "2nd move: select a piece to move it or push an enemy piece away. No captures allowed.";
+      "2nd move: select a piece to move or push, or use Skip 2nd Move. No captures allowed.";
   } else {
     ELEMENTS.selectionText.textContent =
       "Choose to move a piece or place one reserve unit, then select a legal target hex.";
@@ -317,6 +320,12 @@ function renderReservePanel(gameState: GameState, uiState: UIState): void {
     button.classList.toggle("is-active", selectedPlacementType === pieceType);
     (button as HTMLButtonElement).disabled = buttonsBlocked || reserveLeft <= 0;
   }
+
+  ELEMENTS.passPushButton.disabled =
+    gameState.winner !== null ||
+    aiThinking ||
+    isAIControlledPlayer(gameState.currentPlayer, uiState) ||
+    gameState.turnPhase !== "push";
 }
 
 // ---------------------------------------------------------------------------

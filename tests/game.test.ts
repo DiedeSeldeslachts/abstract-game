@@ -81,6 +81,23 @@ function placePiece(
   assert.equal(nextState.lastAction?.kind, "place");
 })();
 
+(function testCanSkipSecondMoveEvenWhenPushMovesExist(): void {
+  const state = createEmptyState("white");
+
+  placePiece(state, 4, 3, "white", "horse", "walker");
+  placePiece(state, 8, 8, "black", "pawn", "keeper");
+  const beforePass = applyMove(state, { row: 4, col: 3 }, { row: 4, col: 2 });
+
+  assert.equal(beforePass.turnPhase, "push");
+  assert.ok(getLegalMoves(beforePass, 4, 2).length > 0);
+
+  const afterPass = applyPassPush(beforePass);
+
+  assert.equal(afterPass.turnPhase, "action");
+  assert.equal(afterPass.currentPlayer, "black");
+  assert.equal(afterPass.lastAction?.kind, "pass");
+})();
+
 (function testPlacedPieceCanBeCapturedImmediatelyOnNextTurn(): void {
   const state = createEmptyState("black");
 

@@ -20,6 +20,7 @@ import {
   renderGame,
   BOARD_ELEMENT,
   GAME_MODE_SELECT,
+  PASS_PUSH_BUTTON,
   RESERVE_BUTTONS
 } from "./renderer.js";
 
@@ -260,6 +261,22 @@ function handleRestartClick(): void {
   render();
 }
 
+function handlePassPushClick(): void {
+  if (
+    state.winner ||
+    uiState.aiThinking ||
+    isAIControlledPlayer(state.currentPlayer) ||
+    state.turnPhase !== "push"
+  ) {
+    return;
+  }
+
+  state = applyPassPush(state);
+  clearSelection();
+  render();
+  if (!state.winner) scheduleAIMove();
+}
+
 // ---------------------------------------------------------------------------
 // Bootstrap
 // ---------------------------------------------------------------------------
@@ -270,5 +287,6 @@ GAME_MODE_SELECT.addEventListener("change", handleModeChange);
 for (const button of RESERVE_BUTTONS) {
   button.addEventListener("click", handleReserveButtonClick);
 }
+PASS_PUSH_BUTTON.addEventListener("click", handlePassPushClick);
 
 render();
