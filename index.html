@@ -13,7 +13,7 @@
         <h1>Kingstep</h1>
         <p class="hero-copy">
           Each player starts with one pawn on a town. Every turn you choose one action:
-          move an existing piece or place a reserve piece on any empty non-town square.
+          move an existing piece or place a reserve piece on any empty non-town hex.
           Reserve limits are fixed, so timing your deployments matters as much as movement.
         </p>
       </header>
@@ -38,7 +38,7 @@
         <aside class="sidebar">
           <section class="card">
             <h2>Reserve Placement</h2>
-            <p class="support-text">Choose one piece type, then click an empty non-town square.</p>
+            <p class="support-text">Choose one piece type, then click an empty non-town hex.</p>
             <div class="reserve-actions">
               <button class="reserve-button" type="button" data-place-type="pawn">
                 <span class="reserve-symbol">♙</span>
@@ -130,10 +130,10 @@
             <ul class="rules-list">
               <li>Start with one pawn each: White on c5, Black on f5.</li>
               <li>Each turn: either move one on-board piece or place one reserve piece.</li>
-              <li>Placement is legal on empty non-town squares only.</li>
+              <li>Placement is legal on empty non-town hexes only.</li>
               <li>Reserve limits per player: 5 pawns, 2 horses, 2 sentinels, 1 teacher.</li>
-              <li>Most pieces move one square in any direction.</li>
-              <li>Horses move one or two squares in a straight line.</li>
+              <li>Most pieces move one adjacent hex.</li>
+              <li>Horses move one or two hexes in a straight line.</li>
               <li>Pawns adjacent to a commander may hop over one friendly adjacent piece.</li>
               <li>You win by controlling both towns OR eliminating all enemy pieces.</li>
             </ul>

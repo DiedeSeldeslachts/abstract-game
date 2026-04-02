@@ -4,6 +4,7 @@ import {
   getAllLegalMoves,
   getPiece,
   playerControlsBothTowns,
+  toAxial,
   TOWN_POSITIONS
 } from "./game.js";
 
@@ -36,8 +37,13 @@ function getOpponent(player) {
   return player === "white" ? "black" : "white";
 }
 
-function getChebyshevDistance(a, b) {
-  return Math.max(Math.abs(a.row - b.row), Math.abs(a.col - b.col));
+function getHexDistance(a, b) {
+  const aAxial = toAxial(a);
+  const bAxial = toAxial(b);
+  const dq = aAxial.q - bAxial.q;
+  const dr = aAxial.r - bAxial.r;
+
+  return (Math.abs(dq) + Math.abs(dr) + Math.abs(dq + dr)) / 2;
 }
 
 function getNearestEnemyDistance(state, square, player) {
@@ -51,7 +57,7 @@ function getNearestEnemyDistance(state, square, player) {
         continue;
       }
 
-      const distance = getChebyshevDistance(square, { row, col });
+      const distance = getHexDistance(square, { row, col });
 
       if (distance < minDistance) {
         minDistance = distance;
@@ -88,7 +94,7 @@ function getNearestTownDistance(square) {
   let minDistance = Number.POSITIVE_INFINITY;
 
   for (const town of TOWN_POSITIONS) {
-    const distance = getChebyshevDistance(square, town);
+    const distance = getHexDistance(square, town);
     if (distance < minDistance) {
       minDistance = distance;
     }

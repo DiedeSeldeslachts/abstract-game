@@ -8,6 +8,7 @@ import {
   getLegalMoves,
   getRemainingReserveCounts,
   getRemainingPieceCounts,
+  isInsideBoard,
   isTownSquare,
   PLACEMENT_LIMITS,
   playerControlsBothTowns,
@@ -79,7 +80,7 @@ function formatPieceName(piece) {
 }
 
 function getSquareClasses(row, col) {
-  const classes = ["square", (row + col) % 2 === 0 ? "light" : "dark"];
+  const classes = ["hex", (row + col) % 2 === 0 ? "light" : "dark"];
 
   if (selectedSquare && selectedSquare.row === row && selectedSquare.col === col) {
     classes.push("is-selected");
@@ -107,30 +108,21 @@ function getSquareClasses(row, col) {
 }
 
 function createCoordinateLabels(row, col) {
-  const wrapper = document.createDocumentFragment();
-
-  if (col === 0) {
-    const rank = document.createElement("span");
-    rank.className = "coord rank";
-    rank.textContent = String(BOARD_ROWS - row);
-    wrapper.append(rank);
-  }
-
-  if (row === BOARD_ROWS - 1) {
-    const file = document.createElement("span");
-    file.className = "coord file";
-    file.textContent = String.fromCharCode(97 + col);
-    wrapper.append(file);
-  }
-
-  return wrapper;
+  return document.createDocumentFragment();
 }
 
 function renderBoard() {
   boardElement.innerHTML = "";
 
   for (let row = 0; row < BOARD_ROWS; row += 1) {
+    const rowElement = document.createElement("div");
+    rowElement.className = "board-row";
+
     for (let col = 0; col < BOARD_COLS; col += 1) {
+      if (!isInsideBoard(row, col)) {
+        continue;
+      }
+
       const piece = state.board[row][col];
       const square = document.createElement("button");
 
@@ -142,7 +134,7 @@ function renderBoard() {
 
       const isTown = isTownSquare(row, col);
       const townLabel = isTown ? " (town)" : "";
-      const pieceLabel = piece ? formatPieceName(piece) : `Empty square${townLabel}`;
+      const pieceLabel = piece ? formatPieceName(piece) : `Empty hex${townLabel}`;
       square.setAttribute("aria-label", `${toAlgebraic({ row, col })}: ${pieceLabel}`);
       square.append(createCoordinateLabels(row, col));
 
@@ -158,7 +150,11 @@ function renderBoard() {
         square.append(townMarker);
       }
 
-      boardElement.append(square);
+      rowElement.append(square);
+    }
+
+    if (rowElement.childElementCount > 0) {
+      boardElement.append(rowElement);
     }
   }
 }
@@ -173,13 +169,13 @@ function renderSidebar() {
 
   if (selectedPlacementType) {
     const reserveLeft = getRemainingReserveCounts(state, state.currentPlayer)[selectedPlacementType];
-    selectionTextElement.textContent = `${titleCase(state.currentPlayer)} is placing ${selectedPlacementType}. Select any highlighted non-town square. ${reserveLeft} remaining.`;
+    selectionTextElement.textContent = `${titleCase(state.currentPlayer)} is placing ${selectedPlacementType}. Select any highlighted non-town hex. ${reserveLeft} remaining.`;
   } else if (selectedSquare) {
     const piece = state.board[selectedSquare.row][selectedSquare.col];
     const moveCount = selectedMoves.length;
     selectionTextElement.textContent = `${formatPieceName(piece)} on ${toAlgebraic(selectedSquare)} has ${moveCount} legal ${moveCount === 1 ? "move" : "moves"}.`;
   } else {
-    selectionTextElement.textContent = "Choose to move a piece or place one reserve unit, then select a legal target square.";
+    selectionTextElement.textContent = "Choose to move a piece or place one reserve unit, then select a legal target hex.";
   }
 
   if (!state.lastAction) {
@@ -257,7 +253,7 @@ function renderStatus() {
   }
 
   if (selectedPlacementType) {
-    statusTextElement.textContent = `${titleCase(HUMAN_PLAYER)} is placing a ${selectedPlacementType}. Placement is legal on empty non-town squares only.`;
+    statusTextElement.textContent = `${titleCase(HUMAN_PLAYER)} is placing a ${selectedPlacementType}. Placement is legal on empty non-town hexes only.`;
     return;
   }
 
@@ -267,7 +263,7 @@ function renderStatus() {
     return;
   }
 
-  statusTextElement.textContent = `${titleCase(state.currentPlayer)} to act. On each turn, either move an existing piece or place one reserve piece onto any empty non-town square. Hold both towns for one full round to win.`;
+  statusTextElement.textContent = `${titleCase(state.currentPlayer)} to act. On each turn, either move an existing piece or place one reserve piece onto any empty non-town hex. Hold both towns for one full round to win.`;
 }
 
 function render() {

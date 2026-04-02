@@ -1,7 +1,8 @@
 export const BOARD_ROWS = 9;
-export const BOARD_COLS = 8;
+export const BOARD_COLS = 9;
+export const HEX_RADIUS = 4;
 
-const FILES = ["a", "b", "c", "d", "e", "f", "g", "h"];
+const FILES = ["a", "b", "c", "d", "e", "f", "g", "h", "i"];
 export const TOWN_POSITIONS = [
   { row: 4, col: 2 }, // c5
   { row: 4, col: 5 }  // f5
@@ -16,15 +17,28 @@ export const PLACEMENT_LIMITS = {
 };
 export const TEACHER_TRANSFORM_TARGET_TYPES = ["commander", "horse", "pawn", "sentinel"];
 const ADJACENT_STEPS = [
-  { row: -1, col: -1 },
-  { row: -1, col: 0 },
-  { row: -1, col: 1 },
-  { row: 0, col: -1 },
   { row: 0, col: 1 },
-  { row: 1, col: -1 },
+  { row: 0, col: -1 },
+  { row: -1, col: 0 },
   { row: 1, col: 0 },
+  { row: -1, col: -1 },
   { row: 1, col: 1 }
 ];
+
+function isPlayableHex(q, r) {
+  return (
+    Math.abs(q) <= HEX_RADIUS &&
+    Math.abs(r) <= HEX_RADIUS &&
+    Math.abs(q + r) <= HEX_RADIUS
+  );
+}
+
+export function toAxial(square) {
+  return {
+    q: square.col - HEX_RADIUS,
+    r: HEX_RADIUS - square.row
+  };
+}
 
 function createEmptyBoard() {
   return Array.from({ length: BOARD_ROWS }, () => Array.from({ length: BOARD_COLS }, () => null));
@@ -344,7 +358,12 @@ export function getPiece(state, row, col) {
 }
 
 export function isInsideBoard(row, col) {
-  return row >= 0 && row < BOARD_ROWS && col >= 0 && col < BOARD_COLS;
+  if (row < 0 || row >= BOARD_ROWS || col < 0 || col >= BOARD_COLS) {
+    return false;
+  }
+
+  const square = toAxial({ row, col });
+  return isPlayableHex(square.q, square.r);
 }
 
 export function getLegalMoves(state, row, col) {
@@ -374,6 +393,10 @@ export function getLegalPlacements(state, player = state.currentPlayer) {
 
   for (let row = 0; row < BOARD_ROWS; row += 1) {
     for (let col = 0; col < BOARD_COLS; col += 1) {
+      if (!isInsideBoard(row, col)) {
+        continue;
+      }
+
       if (state.board[row][col] || isTownSquare(row, col)) {
         continue;
       }
@@ -406,6 +429,10 @@ export function getAllLegalMoves(state, player = state.currentPlayer) {
 
   for (let row = 0; row < BOARD_ROWS; row += 1) {
     for (let col = 0; col < BOARD_COLS; col += 1) {
+      if (!isInsideBoard(row, col)) {
+        continue;
+      }
+
       const piece = state.board[row][col];
 
       if (!piece || piece.player !== player) {

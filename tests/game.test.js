@@ -47,10 +47,10 @@ function placePiece(state, row, col, player, type, suffix = "manual") {
 
 (function testApplyPlacementAddsPieceAndFlipsTurn() {
   const state = createInitialState();
-  const nextState = applyPlacement(state, { row: 0, col: 0 }, "horse");
+  const nextState = applyPlacement(state, { row: 0, col: 2 }, "horse");
 
-  assert.equal(getPiece(nextState, 0, 0)?.type, "horse");
-  assert.equal(getPiece(nextState, 0, 0)?.player, "white");
+  assert.equal(getPiece(nextState, 0, 2)?.type, "horse");
+  assert.equal(getPiece(nextState, 0, 2)?.player, "white");
   assert.equal(nextState.currentPlayer, "black");
   assert.equal(nextState.lastAction?.kind, "place");
 })();
@@ -60,12 +60,12 @@ function placePiece(state, row, col, player, type, suffix = "manual") {
 
   placePiece(state, 4, 4, "white", "pawn", "attacker");
 
-  const afterPlacement = applyPlacement(state, { row: 3, col: 5 }, "pawn");
+  const afterPlacement = applyPlacement(state, { row: 3, col: 4 }, "pawn");
   const whiteMoves = getLegalMoves(afterPlacement, 4, 4);
 
-  assert.ok(whiteMoves.some((move) => move.row === 3 && move.col === 5 && move.capture));
+  assert.ok(whiteMoves.some((move) => move.row === 3 && move.col === 4 && move.capture));
 
-  const afterCapture = applyMove(afterPlacement, { row: 4, col: 4 }, { row: 3, col: 5 });
+  const afterCapture = applyMove(afterPlacement, { row: 4, col: 4 }, { row: 3, col: 4 });
 
   assert.equal(afterCapture.lastAction?.kind, "capture");
   assert.equal(afterCapture.lastAction?.capturedPiece?.player, "black");
@@ -80,16 +80,30 @@ function placePiece(state, row, col, player, type, suffix = "manual") {
 
 (function testPlacementLimitIsEnforced() {
   let state = createInitialState();
+  const whiteSquares = [
+    { row: 0, col: 0 },
+    { row: 0, col: 1 },
+    { row: 0, col: 2 },
+    { row: 0, col: 3 },
+    { row: 0, col: 4 }
+  ];
+  const blackSquares = [
+    { row: 8, col: 4 },
+    { row: 8, col: 5 },
+    { row: 8, col: 6 },
+    { row: 8, col: 7 },
+    { row: 8, col: 8 }
+  ];
 
   for (let index = 0; index < 5; index += 1) {
-    state = applyPlacement(state, { row: 0, col: index }, "pawn");
-    state = applyPlacement(state, { row: 8, col: index }, "pawn");
+    state = applyPlacement(state, whiteSquares[index], "pawn");
+    state = applyPlacement(state, blackSquares[index], "pawn");
   }
 
   const whiteReserve = getRemainingReserveCounts(state, "white");
   assert.equal(whiteReserve.pawn, 0);
 
-  assert.throws(() => applyPlacement(state, { row: 1, col: 6 }, "pawn"), /remaining pawn placements/i);
+  assert.throws(() => applyPlacement(state, { row: 4, col: 4 }, "pawn"), /remaining pawn placements/i);
 })();
 
 (function testUniversalAdjacentMovementStillApplies() {
@@ -99,7 +113,7 @@ function placePiece(state, row, col, player, type, suffix = "manual") {
 
   const moves = getLegalMoves(state, 4, 4).map((square) => toAlgebraic(square)).sort();
 
-  assert.deepEqual(moves, ["d4", "d5", "d6", "e4", "e6", "f4", "f5", "f6"]);
+  assert.deepEqual(moves, ["d5", "d6", "e4", "e6", "f4", "f5"]);
 })();
 
 (function testHorseMovesOneOrTwoSquaresStraight() {
@@ -109,7 +123,7 @@ function placePiece(state, row, col, player, type, suffix = "manual") {
 
   const moves = getLegalMoves(state, 4, 4).map((square) => toAlgebraic(square)).sort();
 
-  assert.deepEqual(moves, ["c3", "c5", "c7", "d4", "d5", "d6", "e3", "e4", "e6", "e7", "f4", "f5", "f6", "g3", "g5", "g7"]);
+  assert.deepEqual(moves, ["c5", "c7", "d5", "d6", "e3", "e4", "e6", "e7", "f4", "f5", "g3", "g5"]);
 })();
 
 (function testTeacherTransformChangesTypeWithoutMovingTeacher() {
