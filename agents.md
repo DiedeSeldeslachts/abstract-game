@@ -1,7 +1,7 @@
 # Agent Instructions
 
 You are creating an abstract strategy game.
-This game includes an AI you can play against; if the game rules are changed, the AI should be changed accordingly.
+This game includes an AI you can play against. When game rules, move logic, or piece types change, you MUST also update `src/ai.ts` to reflect those changes (scoring weights, move evaluation, hardcoded assumptions).
 
 ## General File Creation Guidelines
 
