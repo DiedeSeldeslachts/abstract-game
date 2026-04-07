@@ -65,14 +65,19 @@ function placePiece(
 (function testLegalPlacementsExcludeTownsAndOccupiedSquares(): void {
   const state = createInitialState();
   const placements = getLegalPlacements(state, "white");
+  const whiteOccupiedColor = getTileColor(state, 4, 2)!;
 
   assert.ok(placements.length > 0);
   assert.ok(!placements.some((placement) => placement.to.row === 4 && placement.to.col === 2));
   assert.ok(!placements.some((placement) => placement.to.row === 4 && placement.to.col === 6));
+  assert.ok(
+    placements.every((placement) => getTileColor(state, placement.to.row, placement.to.col) === whiteOccupiedColor)
+  );
 })();
 
 (function testApplyPlacementEndsTurnWithoutCommander(): void {
   const state = createInitialState();
+  state.tileColors["0,2"] = getTileColor(state, 4, 2)!;
   const nextState = applyPlacement(state, { row: 0, col: 2 }, "horse");
 
   assert.equal(getPiece(nextState, 0, 2)?.type, "horse");
@@ -105,10 +110,12 @@ function placePiece(
   const state = createEmptyState("black");
 
   placePiece(state, 5, 5, "white", "pawn", "attacker");
+  placePiece(state, 8, 8, "black", "pawn", "anchor");
 
-  // Ensure tile colors allow capture: target tile matches attacker's tile color
-  const attackerColor = getTileColor(state, 5, 5)!;
-  state.tileColors["4,5"] = attackerColor;
+  // Ensure black can legally place, and white can immediately capture that placed pawn.
+  const blackColor = getTileColor(state, 8, 8)!;
+  state.tileColors["5,5"] = blackColor;
+  state.tileColors["4,5"] = blackColor;
 
   // Black places pawn in action phase
   const afterPlacement = applyPlacement(state, { row: 4, col: 5 }, "pawn");
@@ -131,6 +138,37 @@ function placePiece(
   assert.throws(() => applyPlacement(state, { row: 4, col: 2 }, "pawn"), /town square/i);
 })();
 
+(function testCannotPlaceOnUnoccupiedTileColor(): void {
+  const state = createInitialState();
+  const whiteColor = getTileColor(state, 4, 2)!;
+  let target: Coordinate | null = null;
+
+  for (let row = 0; row < 9; row += 1) {
+    for (let col = 0; col < 9; col += 1) {
+      if (!isInsideBoard(row, col)) {
+        continue;
+      }
+
+      if ((row === 4 && col === 2) || (row === 4 && col === 6) || (row === 4 && col === 4)) {
+        continue;
+      }
+
+      const color = getTileColor(state, row, col);
+      if (color && color !== "white" && color !== whiteColor) {
+        target = { row, col };
+        break;
+      }
+    }
+
+    if (target) {
+      break;
+    }
+  }
+
+  assert.ok(target, "expected to find a tile with a different color than white's occupied color");
+  assert.throws(() => applyPlacement(state, target!, "pawn"), /tile color you already occupy/i);
+})();
+
 (function testPlacementLimitIsEnforced(): void {
   let state = createInitialState();
   const whiteSquares: Coordinate[] = [
@@ -147,11 +185,23 @@ function placePiece(
     { row: 8, col: 7 },
     { row: 8, col: 8 }
   ];
+  const whiteColor = getTileColor(state, 4, 2)!;
+  const blackColor = getTileColor(state, 4, 6)!;
+
+  for (const square of whiteSquares) {
+    state.tileColors[`${square.row},${square.col}`] = whiteColor;
+  }
+
+  for (const square of blackSquares) {
+    state.tileColors[`${square.row},${square.col}`] = blackColor;
+  }
 
   for (let index = 0; index < 5; index += 1) {
     state = applyPlacement(state, whiteSquares[index], "pawn");
     state = applyPlacement(state, blackSquares[index], "pawn");
   }
+
+  state.tileColors["2,4"] = whiteColor;
 
   const whiteReserve = getRemainingReserveCounts(state, "white");
   assert.equal(whiteReserve.pawn, 0);
@@ -164,6 +214,14 @@ function placePiece(
 
 (function testCommanderPlacementLimitIsEnforced(): void {
   const state = createInitialState();
+  const whiteColor = getTileColor(state, 4, 2)!;
+  const blackColor = getTileColor(state, 4, 6)!;
+
+  state.tileColors["0,0"] = whiteColor;
+  state.tileColors["0,1"] = whiteColor;
+  state.tileColors["0,2"] = whiteColor;
+  state.tileColors["8,8"] = blackColor;
+  state.tileColors["8,7"] = blackColor;
 
   const afterFirstCommander = applyPlacement(state, { row: 0, col: 0 }, "commander");
   const afterWhitePass1 = applyPassPush(afterFirstCommander);
@@ -392,6 +450,7 @@ function placePiece(
   const state = createEmptyState("black");
 
   placePiece(state, 8, 7, "white", "pawn", "alive");
+  placePiece(state, 8, 8, "black", "sentinel", "anchor");
 
   const move = chooseAIMove(state, "black");
 
@@ -406,6 +465,7 @@ function placePiece(
 
   placePiece(state, 4, 5, "white", "pawn", "town-threat-a");
   placePiece(state, 5, 6, "white", "horse", "town-threat-b");
+  placePiece(state, 8, 8, "black", "sentinel", "anchor");
 
   // Mark the black king as already placed so the AI won't pick it
   state.placedPieces.black.king = 1;
@@ -536,6 +596,12 @@ console.log("Kingstep rules validation passed.");
 
 (function testKingPlacementLimitIsOne(): void {
   const state = createInitialState();
+  const whiteColor = getTileColor(state, 4, 2)!;
+  const blackColor = getTileColor(state, 4, 6)!;
+
+  state.tileColors["0,2"] = whiteColor;
+  state.tileColors["0,3"] = whiteColor;
+  state.tileColors["8,4"] = blackColor;
 
   // Place white king on an edge tile
   const afterFirstKing = applyPlacement(state, { row: 0, col: 2 }, "king");
@@ -565,6 +631,8 @@ console.log("Kingstep rules validation passed.");
 
 (function testKingLegalPlacementsAreAllEdgeTiles(): void {
   const state = createInitialState();
+  const whiteColor = getTileColor(state, 4, 2)!;
+  state.tileColors["0,2"] = whiteColor;
   const placements = getLegalPlacements(state, "white").filter((p) => p.placeType === "king");
 
   assert.ok(placements.length > 0, "king must have legal placements");

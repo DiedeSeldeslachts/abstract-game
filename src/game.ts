@@ -461,6 +461,26 @@ export function getRemainingReserveCounts(
   };
 }
 
+function getOccupiedTileColorsForPlayer(state: GameState, player: Player): Set<TileColor> {
+  const occupiedColors = new Set<TileColor>();
+
+  for (let row = 0; row < BOARD_ROWS; row += 1) {
+    for (let col = 0; col < BOARD_COLS; col += 1) {
+      const piece = state.board[row][col];
+      if (!piece || piece.player !== player) {
+        continue;
+      }
+
+      const tileColor = getTileColor(state, row, col);
+      if (tileColor && tileColor !== "white") {
+        occupiedColors.add(tileColor);
+      }
+    }
+  }
+
+  return occupiedColors;
+}
+
 export function getLegalPlacements(
   state: GameState,
   player: Player = state.currentPlayer
@@ -471,6 +491,11 @@ export function getLegalPlacements(
 
   const placements: PlacementAction[] = [];
   const reserve = getRemainingReserveCounts(state, player);
+  const occupiedColors = getOccupiedTileColorsForPlayer(state, player);
+
+  if (occupiedColors.size === 0) {
+    return [];
+  }
 
   for (let row = 0; row < BOARD_ROWS; row += 1) {
     for (let col = 0; col < BOARD_COLS; col += 1) {
@@ -483,6 +508,11 @@ export function getLegalPlacements(
         isTownSquare(row, col) ||
         isCenterTile(row, col)
       ) {
+        continue;
+      }
+
+      const destinationColor = getTileColor(state, row, col);
+      if (!destinationColor || !occupiedColors.has(destinationColor)) {
         continue;
       }
 
@@ -940,6 +970,13 @@ export function applyPlacement(
 
   if (state.board[to.row][to.col]) {
     throw new Error("You can only place on an empty square.");
+  }
+
+  const occupiedColors = getOccupiedTileColorsForPlayer(state, state.currentPlayer);
+  const destinationColor = getTileColor(state, to.row, to.col);
+
+  if (!destinationColor || !occupiedColors.has(destinationColor)) {
+    throw new Error("You can only place on a tile color you already occupy.");
   }
 
   const remainingReserve = getRemainingReserveCounts(state, state.currentPlayer);

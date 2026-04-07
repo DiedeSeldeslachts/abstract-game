@@ -51,7 +51,7 @@ Each turn starts with one required **main action**, followed by zero or more **c
 
 **Main action** — choose exactly one:
 1. Move one of your on-board pieces to a legal destination. If the destination has an opposing piece, capture it.
-2. Place one piece type from your reserve on any empty square that is not a town square or the center tile.
+2. Place one piece type from your reserve on an empty square that is not a town square or the center tile, and whose tile color matches at least one tile color currently occupied by one of your own on-board pieces.
 
 **Commander bonus moves**:
 1. After the main action resolves, count how many friendly commanders you currently have on the board.
@@ -75,6 +75,7 @@ Global rules:
 - **Capture tile-color rule:** a capture is legal only if there is a tile of the same color as the capturing piece's starting tile on the capture line in the movement direction (this may be before the target, on the target, or beyond the target). If no such same-color tile exists on that line, the capture is not allowed.
 - Placement never captures and is only available as the main action.
 - Pieces may not be placed on town squares or on the center tile.
+- **Placement color rule:** you may place only on a tile color you already occupy with at least one of your own on-board pieces.
 - Commander bonus moves cannot capture; they can only move to empty squares or push enemy pieces.
 - A player may voluntarily end their remaining commander bonus moves, even if legal bonus moves exist.
 
@@ -139,6 +140,7 @@ Pawn commander bonus move rule:
 - Horses are the only pieces that can move two squares in a straight line.
 - Pawn tile color rule applies only on the main action. During commander bonus moves, pawns move one step freely.
 - A piece placed on the main action can be captured normally by the opponent on their next main action; placement grants no capture immunity.
+- If you do not occupy any playable tile color with your own pieces, you have no legal placement actions.
 - If a player has no legal main actions, they may not skip it; but if the board and reserve both yield no valid action, the game is considered stuck (draw by stalemate is not formally defined in the current rules).
 - If a player has no legal commander bonus moves, the turn ends immediately.
 - A player may also end commander bonus moves early even when legal bonus moves exist.
@@ -179,6 +181,12 @@ White's remaining horse placements decrease by one.
 
 Black cannot place a sentinel directly on c5 or g5,
 even if the town square is empty. Black also cannot place on e5 (the center tile).
+
+### Example 2b: Placement color restriction
+
+White currently occupies only **blue** and **green** tiles.
+White may place only on empty non-town, non-center tiles that are **blue** or **green**.
+Placing on **yellow** or **brown** is illegal until White occupies at least one tile of that color.
 
 ### Example 3: Commander bonus move count
 
@@ -234,3 +242,4 @@ White wins immediately — the game ends as soon as the king enters the center.
 - Added center tile rule: e5 is white and impassable — no piece may enter or be placed on it.
 - Added capture tile-color rule: on the 1st move, a piece can only capture an enemy if there is a tile of the same color as the capturing piece's starting tile along the movement path to the target (inclusive). This applies to all capture types: single-step, horse, pawn slide, and commander aura hops.
 - Removed teacher piece and all transformation mechanics from the ruleset.
+- Added placement color restriction: players may only place on tile colors they already occupy with at least one on-board piece.
