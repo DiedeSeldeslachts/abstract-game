@@ -30,6 +30,7 @@ interface ElementCache {
   statusText: HTMLElement;
   selectionText: HTMLElement;
   lastActionText: HTMLElement;
+  aiReasonText: HTMLElement;
   whiteRemaining: HTMLElement;
   blackRemaining: HTMLElement;
   whiteCaptures: HTMLElement;
@@ -54,6 +55,7 @@ const ELEMENTS: ElementCache = {
   statusText: document.querySelector("#status-text")!,
   selectionText: document.querySelector("#selection-text")!,
   lastActionText: document.querySelector("#last-action-text")!,
+  aiReasonText: document.querySelector("#ai-reason-text")!,
   whiteRemaining: document.querySelector("#white-remaining")!,
   blackRemaining: document.querySelector("#black-remaining")!,
   whiteCaptures: document.querySelector("#white-captures")!,
@@ -263,6 +265,26 @@ function renderSidebar(gameState: GameState, uiState: UIState): void {
   }
 
   renderLastAction(gameState);
+  renderAIReason(gameState, uiState);
+}
+
+function renderAIReason(gameState: GameState, uiState: UIState): void {
+  if (uiState.gameMode !== "vs-ai") {
+    ELEMENTS.aiReasonText.textContent = "AI explanation is available in Play vs AI mode.";
+    return;
+  }
+
+  if (uiState.aiThinking && gameState.currentPlayer === "black") {
+    ELEMENTS.aiReasonText.textContent = "AI is evaluating candidate moves...";
+    return;
+  }
+
+  if (!uiState.aiLastExplanation) {
+    ELEMENTS.aiReasonText.textContent = "No AI move yet.";
+    return;
+  }
+
+  ELEMENTS.aiReasonText.textContent = uiState.aiLastExplanation;
 }
 
 function renderLastAction(gameState: GameState): void {

@@ -209,6 +209,7 @@ export interface UIState {
   selectedMoves: MoveDestination[];
   selectedPlacementType: PlaceableType | null;
   aiThinking: boolean;
+  aiLastExplanation: string;
 }
 
 /**
@@ -221,4 +222,5 @@ export interface AIMove {
   capture: boolean;
   piece: Piece | null;
   placeType: PlaceableType | null;
+  explanation: string;
 }

@@ -20,9 +20,11 @@ import {
   getAllLegalMoves,
   getPiece,
   getRemainingReserveCounts,
+  getTileColor,
   isCenterTile,
   isInsideBoard,
   playerControlsBothTowns,
+  toAlgebraic,
   toAxial,
   TOWN_POSITIONS
 } from "./game.js";
@@ -35,24 +37,37 @@ const CAPTURE_VALUES: Record<PieceType, number> = {
   sentinel: 8
 };
 
+const PLACEMENT_ORDER_VALUES: Record<PieceType, number> = {
+  commander: 220,
+  horse: 160,
+  king: 90,
+  pawn: 120,
+  sentinel: 200
+};
+
 const SEARCH_MAX_DEPTH = 3;
-const SEARCH_TIME_BUDGET_MS = 1400;
-const QUIESCENCE_DEPTH = 1;
+const SEARCH_TIME_BUDGET_MS = 2000;
+const QUIESCENCE_DEPTH = 2;
 const WIN_SCORE = 1_000_000;
 
-const MATERIAL_WEIGHT = 36;
-const MOBILITY_WEIGHT = 4;
+const MATERIAL_WEIGHT = 50;
+const MOBILITY_WEIGHT = 2;
 const TOWN_CONTROL_SCORE = 2200;
-const TOWN_OCCUPATION_SCORE = 360;
-const TOWN_DISTANCE_WEIGHT = 20;
+const TOWN_OCCUPATION_SCORE = 180;
+const TOWN_DISTANCE_WEIGHT = 12;
 const CENTER_CONTROL_WEIGHT = 10;
-const PIECE_SAFETY_WEIGHT = 1;
-const PUSH_PRESSURE_WEIGHT = 34;
-const OPENING_AGGRESSION_WEIGHT = 18;
-const ENDGAME_TOWN_WEIGHT = 220;
-const CAPTURE_THREAT_WEIGHT = 18;
+const PIECE_SAFETY_WEIGHT = 3;
+const PUSH_PRESSURE_WEIGHT = 42;
+const OPENING_AGGRESSION_WEIGHT = 28;
+const ENDGAME_TOWN_WEIGHT = 140;
+const CAPTURE_THREAT_WEIGHT = 28;
 const SENTINEL_POSITION_WEIGHT = 42;
-const KING_CENTER_DISTANCE_WEIGHT = 300;
+const KING_CENTER_DISTANCE_WEIGHT = 350;
+const DEPLOYMENT_WEIGHT = 16;
+const KING_SAFETY_WEIGHT = 40;
+const KING_THREAT_WEIGHT = 35;
+const CENTER_BLOCKADE_WEIGHT = 25;
+const COLOR_DIVERSITY_WEIGHT = 12;
 
 const ADJACENT_STEPS: readonly Coordinate[] = [
   { row: 0, col: 1 },
@@ -219,6 +234,26 @@ function countFriendlyAdjacency(state: GameState, square: Coordinate, player: Pl
   return defenders;
 }
 
+function countMobileDefenders(state: GameState, square: Coordinate, player: Player): number {
+  let defenders = 0;
+
+  for (const step of ADJACENT_STEPS) {
+    const row = square.row + step.row;
+    const col = square.col + step.col;
+
+    if (!isInsideBoard(row, col) || isCenterTile(row, col)) {
+      continue;
+    }
+
+    const piece = state.board[row][col];
+    if (piece && piece.player === player && piece.type !== "sentinel") {
+      defenders += 1;
+    }
+  }
+
+  return defenders;
+}
+
 function countEnemyAdjacency(state: GameState, square: Coordinate, player: Player): number {
   const opponent = getOpponent(player);
   let enemies = 0;
@@ -276,7 +311,7 @@ function getPieceSafetyScore(
 
       const square = { row, col };
       const attackCount = opponentAttackMap.get(`${row},${col}`) ?? 0;
-      const defenderCount = countFriendlyAdjacency(state, square, player);
+      const defenderCount = countMobileDefenders(state, square, player);
       const pieceScale = getPieceValue(piece);
 
       if (attackCount > 0) {
@@ -513,6 +548,161 @@ function getKingCenterBonus(state: GameState, player: Player): number {
   return 0;
 }
 
+function findKingSquare(state: GameState, player: Player): Coordinate | null {
+  for (let row = 0; row < state.board.length; row += 1) {
+    for (let col = 0; col < state.board[row].length; col += 1) {
+      const piece = state.board[row][col];
+      if (piece?.player === player && piece.type === "king") {
+        return { row, col };
+      }
+    }
+  }
+
+  return null;
+}
+
+function getDeploymentScore(state: GameState, player: Player): number {
+  let piecesOnBoard = 0;
+
+  for (let row = 0; row < state.board.length; row += 1) {
+    for (let col = 0; col < state.board[row].length; col += 1) {
+      const piece = state.board[row][col];
+      if (piece?.player === player) {
+        piecesOnBoard += 1;
+      }
+    }
+  }
+
+  return piecesOnBoard;
+}
+
+function getKingSafetyScale(distanceToCenter: number): number {
+  if (distanceToCenter <= 2) {
+    return 0.25;
+  }
+
+  if (distanceToCenter >= 4) {
+    return 1;
+  }
+
+  return 0.6;
+}
+
+function getKingSafetyScore(state: GameState, player: Player): number {
+  const ownKing = findKingSquare(state, player);
+  if (!ownKing) {
+    return 0;
+  }
+
+  const center = { row: 4, col: 4 };
+  const distanceToCenter = getHexDistance(ownKing, center);
+  const scale = getKingSafetyScale(distanceToCenter);
+  const opponent = getOpponent(player);
+  let baseScore = 0;
+
+  for (const step of ADJACENT_STEPS) {
+    const row = ownKing.row + step.row;
+    const col = ownKing.col + step.col;
+
+    if (!isInsideBoard(row, col) || isCenterTile(row, col)) {
+      continue;
+    }
+
+    const piece = state.board[row][col];
+    if (!piece) {
+      continue;
+    }
+
+    if (piece.player === player) {
+      baseScore += piece.type === "sentinel" ? 6 : 3;
+    } else if (piece.player === opponent) {
+      baseScore -= 4;
+    }
+  }
+
+  return Math.round(baseScore * scale);
+}
+
+function getKingThreatScore(state: GameState, player: Player): number {
+  const opponent = getOpponent(player);
+  const enemyKing = findKingSquare(state, opponent);
+  if (!enemyKing) {
+    return 0;
+  }
+
+  let score = 0;
+
+  for (let row = 0; row < state.board.length; row += 1) {
+    for (let col = 0; col < state.board[row].length; col += 1) {
+      const piece = state.board[row][col];
+      if (!piece || piece.player !== player) {
+        continue;
+      }
+
+      const square = { row, col };
+      const distance = getHexDistance(square, enemyKing);
+
+      if (distance === 1) {
+        const defenders = countMobileDefenders(state, square, player);
+        score += defenders > 0 ? 4 : 1;
+      } else if (distance === 2) {
+        score += 2;
+      }
+    }
+  }
+
+  return score;
+}
+
+function getCenterBlockadeScore(state: GameState, player: Player): number {
+  const opponent = getOpponent(player);
+  const enemyKing = findKingSquare(state, opponent);
+  if (!enemyKing) {
+    return 0;
+  }
+
+  const center = { row: 4, col: 4 };
+  const enemyKingDistance = getHexDistance(enemyKing, center);
+  let score = 0;
+
+  for (let row = 0; row < state.board.length; row += 1) {
+    for (let col = 0; col < state.board[row].length; col += 1) {
+      const piece = state.board[row][col];
+      if (!piece || piece.player !== player) {
+        continue;
+      }
+
+      const square = { row, col };
+      const pieceDistanceToCenter = getHexDistance(square, center);
+      if (pieceDistanceToCenter <= 2 && pieceDistanceToCenter < enemyKingDistance) {
+        score += 1;
+      }
+    }
+  }
+
+  return score;
+}
+
+function getColorDiversityScore(state: GameState, player: Player): number {
+  const occupiedColors = new Set<string>();
+
+  for (let row = 0; row < state.board.length; row += 1) {
+    for (let col = 0; col < state.board[row].length; col += 1) {
+      const piece = state.board[row][col];
+      if (!piece || piece.player !== player) {
+        continue;
+      }
+
+      const color = getTileColor(state, row, col);
+      if (color) {
+        occupiedColors.add(color);
+      }
+    }
+  }
+
+  return occupiedColors.size;
+}
+
 function evaluateState(state: GameState, player: Player): number {
   const opponent = getOpponent(player);
 
@@ -566,6 +756,23 @@ function evaluateState(state: GameState, player: Player): number {
     (getKingCenterBonus(state, player) - getKingCenterBonus(state, opponent)) *
     KING_CENTER_DISTANCE_WEIGHT;
 
+  const deploymentScore =
+    (getDeploymentScore(state, player) - getDeploymentScore(state, opponent)) * DEPLOYMENT_WEIGHT;
+
+  const kingSafetyScore =
+    (getKingSafetyScore(state, player) - getKingSafetyScore(state, opponent)) * KING_SAFETY_WEIGHT;
+
+  const kingThreatScore =
+    (getKingThreatScore(state, player) - getKingThreatScore(state, opponent)) * KING_THREAT_WEIGHT;
+
+  const centerBlockadeScore =
+    (getCenterBlockadeScore(state, player) - getCenterBlockadeScore(state, opponent)) *
+    CENTER_BLOCKADE_WEIGHT;
+
+  const colorDiversityScore =
+    (getColorDiversityScore(state, player) - getColorDiversityScore(state, opponent)) *
+    COLOR_DIVERSITY_WEIGHT;
+
   const pushPressureScore =
     (countPushPressure(state, player) - countPushPressure(state, opponent)) *
     PUSH_PRESSURE_WEIGHT;
@@ -590,10 +797,230 @@ function evaluateState(state: GameState, player: Player): number {
     captureThreatScore +
     sentinelPositionScore +
     kingCenterScore +
+    deploymentScore +
+    kingSafetyScore +
+    kingThreatScore +
+    centerBlockadeScore +
+    colorDiversityScore +
     pushPressureScore +
     openingScore +
     endgameScore
   );
+}
+
+function isSquareAdjacentToEnemyKing(state: GameState, square: Coordinate, player: Player): boolean {
+  const enemyKing = findKingSquare(state, getOpponent(player));
+  if (!enemyKing) {
+    return false;
+  }
+
+  return getHexDistance(square, enemyKing) === 1;
+}
+
+function hasHighValueFriendlyAdjacent(
+  state: GameState,
+  square: Coordinate,
+  player: Player,
+  ignoreSquare?: Coordinate
+): boolean {
+  for (const step of ADJACENT_STEPS) {
+    const row = square.row + step.row;
+    const col = square.col + step.col;
+
+    if (!isInsideBoard(row, col) || isCenterTile(row, col)) {
+      continue;
+    }
+
+    if (ignoreSquare && ignoreSquare.row === row && ignoreSquare.col === col) {
+      continue;
+    }
+
+    const piece = state.board[row][col];
+    if (piece?.player === player && getPieceValue(piece) >= 8) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function isQuietMove(
+  state: GameState,
+  move: MoveAction,
+  actingPlayer: Player,
+  center: Coordinate
+): boolean {
+  if (move.capture || move.push) {
+    return false;
+  }
+
+  if (isTownSquare(move.to)) {
+    return false;
+  }
+
+  const enemyAdjacency = countEnemyAdjacency(state, move.to, actingPlayer);
+  const friendlyAdjacency = countFriendlyAdjacency(state, move.to, actingPlayer);
+  if (enemyAdjacency > 0 || friendlyAdjacency > 0) {
+    return false;
+  }
+
+  const fromDistance = getHexDistance(move.from, center);
+  const toDistance = getHexDistance(move.to, center);
+  return toDistance >= fromDistance;
+}
+
+function getImmediateCaptureRiskPenalty(
+  state: GameState,
+  square: Coordinate,
+  player: Player
+): number {
+  const piece = state.board[square.row][square.col];
+  if (!piece || piece.player !== player) {
+    return 0;
+  }
+
+  const opponent = getOpponent(player);
+  const opponentMoves = getAllLegalMoves(state, opponent);
+  const captureThreats = opponentMoves.filter(
+    (candidate) =>
+      candidate.action === "move" &&
+      candidate.capture &&
+      candidate.to.row === square.row &&
+      candidate.to.col === square.col
+  ) as MoveAction[];
+
+  if (captureThreats.length === 0) {
+    return 0;
+  }
+
+  let unretakeableThreats = 0;
+  let retakeableThreats = 0;
+
+  for (const threat of captureThreats) {
+    const afterCapture = applyAction(state, threat);
+    const canRetake = getAllLegalMoves(afterCapture, player).some(
+      (reply) =>
+        reply.action === "move" &&
+        reply.capture &&
+        reply.to.row === square.row &&
+        reply.to.col === square.col
+    );
+
+    if (canRetake) {
+      retakeableThreats += 1;
+    } else {
+      unretakeableThreats += 1;
+    }
+  }
+
+  if (unretakeableThreats === 0) {
+    return 0;
+  }
+
+  const mobileDefenders = countMobileDefenders(state, square, player);
+  const pieceValue = getPieceValue(piece);
+
+  let penalty = unretakeableThreats * (180 + pieceValue * 30);
+  penalty += retakeableThreats * 45;
+  penalty -= mobileDefenders * 40;
+
+  if (isTownSquare(square)) {
+    penalty += 180;
+  }
+
+  if (piece.type === "king") {
+    penalty += 360;
+  }
+
+  return Math.max(0, penalty);
+}
+
+function getCaptureTradeScore(
+  beforeState: GameState,
+  afterState: GameState,
+  move: MoveAction,
+  player: Player
+): number {
+  if (!move.capture) {
+    return 0;
+  }
+
+  const capturedPiece = getPiece(beforeState, move.to.row, move.to.col);
+  if (!capturedPiece) {
+    return 0;
+  }
+
+  const capturedValue = getPieceValue(capturedPiece);
+  const attackerValue = getPieceValue(move.piece);
+  const opponent = getOpponent(player);
+  const square = move.to;
+
+  const recaptures = getAllLegalMoves(afterState, opponent).filter(
+    (candidate) =>
+      candidate.action === "move" &&
+      candidate.capture &&
+      candidate.to.row === square.row &&
+      candidate.to.col === square.col
+  ) as MoveAction[];
+
+  if (recaptures.length === 0) {
+    return 180 + capturedValue * 16;
+  }
+
+  let worstNet = Number.POSITIVE_INFINITY;
+
+  for (const recapture of recaptures) {
+    const afterRecapture = applyAction(afterState, recapture);
+    const canReplyRecapture = getAllLegalMoves(afterRecapture, player).some(
+      (reply) =>
+        reply.action === "move" &&
+        reply.capture &&
+        reply.to.row === square.row &&
+        reply.to.col === square.col
+    );
+
+    let netMaterial = capturedValue - attackerValue;
+    if (canReplyRecapture) {
+      netMaterial += getPieceValue(recapture.piece);
+    }
+
+    if (netMaterial < worstNet) {
+      worstNet = netMaterial;
+    }
+  }
+
+  if (!Number.isFinite(worstNet)) {
+    return 0;
+  }
+
+  return worstNet * 75;
+}
+
+function getThreatenedFriendlyTownCount(state: GameState, player: Player): number {
+  const opponent = getOpponent(player);
+  const opponentMoves = getAllLegalMoves(state, opponent);
+
+  let threatened = 0;
+  for (const town of TOWN_POSITIONS) {
+    const townPiece = state.board[town.row][town.col];
+    if (!townPiece || townPiece.player !== player) {
+      continue;
+    }
+
+    const isThreatened = opponentMoves.some(
+      (candidate) =>
+        candidate.action === "move" &&
+        candidate.capture &&
+        candidate.to.row === town.row &&
+        candidate.to.col === town.col
+    );
+
+    if (isThreatened) {
+      threatened += 1;
+    }
+  }
+
+  return threatened;
 }
 
 function applyAction(state: GameState, action: GameAction): GameState {
@@ -608,6 +1035,7 @@ function applyAction(state: GameState, action: GameAction): GameState {
 
 function evaluateMoveForOrdering(state: GameState, move: GameAction, rootPlayer: Player): number {
   const actingPlayer = state.currentPlayer;
+  const center = { row: 4, col: 4 };
   let score = 0;
 
   if (move.action === "place") {
@@ -620,7 +1048,7 @@ function evaluateMoveForOrdering(state: GameState, move: GameAction, rootPlayer:
     const friendlyAdjacency = countFriendlyAdjacency(state, placement.to, actingPlayer);
     const enemyAdjacency = countEnemyAdjacency(state, placement.to, actingPlayer);
 
-    score += (CAPTURE_VALUES[placement.placeType] ?? 0) * 10;
+    score += PLACEMENT_ORDER_VALUES[placement.placeType] ?? 0;
     if (Number.isFinite(nearEnemyDistance)) {
       score += Math.max(0, 8 - nearEnemyDistance) * 12;
     }
@@ -635,8 +1063,22 @@ function evaluateMoveForOrdering(state: GameState, move: GameAction, rootPlayer:
       }
     }
 
-    if (state.moveNumber <= 8 && state.turnPhase === "action") {
-      score += 280;
+    if (placement.placeType === "king") {
+      if (state.moveNumber < 8) {
+        score -= 300;
+      } else {
+        score += 150;
+      }
+
+      score += friendlyAdjacency * 20;
+      score -= enemyAdjacency * 140;
+      if (friendlyAdjacency === 0) {
+        score -= 120;
+      }
+    }
+
+    if (state.turnPhase === "action") {
+      score += state.moveNumber <= 12 ? 400 : 200;
     }
   } else {
     const moveAction = move as MoveAction;
@@ -657,11 +1099,42 @@ function evaluateMoveForOrdering(state: GameState, move: GameAction, rootPlayer:
     if (moveAction.push) {
       score += 160;
     }
+
+    if (isQuietMove(state, moveAction, actingPlayer, center)) {
+      score -= 220;
+    }
+  }
+
+  const threatenedTownsBefore = getThreatenedFriendlyTownCount(state, actingPlayer);
+
+  const destination = move.to;
+  const ignoreSquare = move.action === "move" ? (move as MoveAction).from : undefined;
+  if (hasHighValueFriendlyAdjacent(state, destination, actingPlayer, ignoreSquare)) {
+    score += 120;
+  }
+
+  if (isSquareAdjacentToEnemyKing(state, destination, actingPlayer)) {
+    score += 200;
   }
 
   const nextState = applyAction(state, move);
+
+  if (move.action === "move" && move.capture) {
+    score += getCaptureTradeScore(state, nextState, move as MoveAction, actingPlayer);
+  }
+
+  const immediateRiskPenalty = getImmediateCaptureRiskPenalty(nextState, destination, actingPlayer);
+  score -= move.action === "place" ? Math.floor(immediateRiskPenalty * 0.5) : immediateRiskPenalty;
+
   if (nextState.winner === actingPlayer) {
     score += WIN_SCORE / 2;
+  }
+
+  const threatenedTownsAfter = getThreatenedFriendlyTownCount(nextState, actingPlayer);
+  score += (threatenedTownsBefore - threatenedTownsAfter) * 520;
+
+  if (move.action === "place" && (move as PlacementAction).placeType === "king" && threatenedTownsBefore > 0) {
+    score -= 450;
   }
 
   const perspective = actingPlayer === rootPlayer ? 1 : -1;
@@ -893,7 +1366,78 @@ function alphabeta(
   return { score: bestScore, bestMove, completed: true };
 }
 
-function toAIMove(action: GameAction): AIMove {
+function getCoordinateLabel(square: Coordinate): string {
+  return toAlgebraic(square);
+}
+
+function getMoveReasons(state: GameState, action: GameAction, player: Player): string[] {
+  const reasons: string[] = [];
+
+  if (action.action === "place") {
+    reasons.push(`develops a ${action.placeType}`);
+
+    if (action.placeType === "king") {
+      const friendlyAdjacency = countFriendlyAdjacency(state, action.to, player);
+      if (friendlyAdjacency > 0) {
+        reasons.push(`king enters with ${friendlyAdjacency} nearby defender${friendlyAdjacency === 1 ? "" : "s"}`);
+      }
+    }
+  } else {
+    if (action.capture) {
+      const target = getPiece(state, action.to.row, action.to.col);
+      if (target) {
+        reasons.push(`captures ${target.player} ${target.type}`);
+      } else {
+        reasons.push("plays an immediate capture");
+      }
+    }
+
+    if (action.push) {
+      reasons.push("creates push pressure");
+    }
+
+    if (isTownSquare(action.to)) {
+      reasons.push("reinforces town control");
+    }
+  }
+
+  if (isSquareAdjacentToEnemyKing(state, action.to, player)) {
+    reasons.push("increases pressure on the enemy king");
+  }
+
+  const threatenedBefore = getThreatenedFriendlyTownCount(state, player);
+  if (threatenedBefore > 0) {
+    const afterState = applyAction(state, action);
+    const threatenedAfter = getThreatenedFriendlyTownCount(afterState, player);
+    if (threatenedAfter < threatenedBefore) {
+      reasons.push("reduces immediate town-capture threats");
+    }
+  }
+
+  return reasons;
+}
+
+function buildAIMoveExplanation(
+  state: GameState,
+  action: GameAction,
+  player: Player,
+  reachedDepth: number,
+  nodesVisited: number,
+  elapsedMs: number
+): string {
+  const reasons = getMoveReasons(state, action, player);
+  const destination = getCoordinateLabel(action.to);
+  const actionText =
+    action.action === "place"
+      ? `Place ${action.placeType} on ${destination}`
+      : `Move ${action.piece.player} ${action.piece.type} to ${destination}`;
+
+  const reasonText = reasons.length > 0 ? reasons.join("; ") : "best overall score from current search";
+
+  return `${actionText}. Why: ${reasonText}. Search depth ${reachedDepth}, nodes ${nodesVisited}, time ${elapsedMs}ms.`;
+}
+
+function toAIMove(action: GameAction, explanation: string): AIMove {
   if (action.action === "place") {
     const placement = action as PlacementAction;
     return {
@@ -902,7 +1446,8 @@ function toAIMove(action: GameAction): AIMove {
       to: { ...placement.to },
       capture: false,
       piece: null,
-      placeType: placement.placeType
+      placeType: placement.placeType,
+      explanation
     };
   }
 
@@ -913,7 +1458,8 @@ function toAIMove(action: GameAction): AIMove {
     to: { ...move.to },
     capture: move.capture,
     piece: move.piece,
-    placeType: null
+    placeType: null,
+    explanation
   };
 }
 
@@ -933,7 +1479,8 @@ export function chooseAIMove(state: GameState, player: Player = state.currentPla
       const placements = legalMoves.filter((move) => move.action === "place");
       if (placements.length > 0) {
         const openingPlacement = orderMoves(state, placements, player)[0];
-        return toAIMove(openingPlacement);
+        const openingExplanation = buildAIMoveExplanation(state, openingPlacement, player, 0, 0, 0);
+        return toAIMove(openingPlacement, openingExplanation);
       }
     }
   }
@@ -982,5 +1529,14 @@ export function chooseAIMove(state: GameState, player: Player = state.currentPla
     `[AI] player=${player} depth=${reachedDepth} nodes=${context.nodesVisited} timeMs=${elapsedMs} move=${actionKey(bestMove)}`
   );
 
-  return toAIMove(bestMove);
+  const explanation = buildAIMoveExplanation(
+    state,
+    bestMove,
+    player,
+    reachedDepth,
+    context.nodesVisited,
+    elapsedMs
+  );
+
+  return toAIMove(bestMove, explanation);
 }

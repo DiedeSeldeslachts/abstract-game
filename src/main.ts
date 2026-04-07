@@ -46,7 +46,8 @@ let uiState: UIState = {
   selectedSquare: null,
   selectedMoves: [],
   selectedPlacementType: null,
-  aiThinking: false
+  aiThinking: false,
+  aiLastExplanation: ""
 };
 
 let aiMoveTimer: ReturnType<typeof window.setTimeout> | null = null;
@@ -107,6 +108,8 @@ function performAIMove(): void {
     render();
     return;
   }
+
+  uiState.aiLastExplanation = move.explanation;
 
   state =
     move.action === "place"
@@ -243,6 +246,7 @@ function handleModeChange(event: Event): void {
   state = createInitialState();
   clearSelection();
   uiState.aiThinking = false;
+  uiState.aiLastExplanation = "";
   render();
   scheduleAIMove();
 }
@@ -258,6 +262,7 @@ function handleRestartClick(): void {
   uiState.selectedMoves = [];
   uiState.selectedPlacementType = null;
   uiState.aiThinking = false;
+  uiState.aiLastExplanation = "";
   render();
 }
 
