@@ -72,7 +72,7 @@ Global rules:
 - Only a king may move onto or be placed on the center tile (e5). All other pieces are blocked from entering it.
 - You may not move onto a square occupied by a friendly piece.
 - Captures happen only on the main action, by moving onto an enemy-occupied square.
-- **Capture tile-color rule:** a capture is legal only if there is a tile of the same color as the capturing piece's starting tile on the capture line in the movement direction (this may be before the target, on the target, or beyond the target). If no such same-color tile exists on that line, the capture is not allowed.
+- **Capture tile-color rule:** a capture is legal only if there is a tile of the same color as the capturing piece's starting tile on the capture line in the movement direction on the target square or beyond it. A matching tile that appears only before the target does not allow the capture. If no such same-color tile exists on or beyond the target on that line, the capture is not allowed.
 - Placement never captures and is only available as the main action.
 - Pieces may not be placed on town squares or on the center tile.
 - **Placement color rule:** you may place only on a tile color you already occupy with at least one of your own on-board pieces.
@@ -115,7 +115,7 @@ Pawn sliding rule (main action):
 
 - On the main action, a pawn may slide any number of squares in a single direction.
 - The pawn must stop on a tile whose **color matches the pawn's starting tile color**.
-- If the pawn encounters an enemy piece, a capture is only allowed if the capture tile-color rule is satisfied: there must be a tile matching the pawn's starting tile color on that same slide line (before the enemy, on the enemy tile, or beyond the enemy). If the rule is not satisfied, the pawn is still blocked and cannot slide further, but no capture occurs.
+- If the pawn encounters an enemy piece, a capture is only allowed if the capture tile-color rule is satisfied: there must be a tile matching the pawn's starting tile color on the enemy tile or beyond it on that same slide line. A matching tile that appears only before the enemy does not allow the capture. If the rule is not satisfied, the pawn is still blocked and cannot slide further, but no capture occurs.
 - If a friendly piece blocks the path, the pawn may not pass through it.
 - If no valid stopping tile exists in a given direction, the pawn may not move in that direction.
 - A pawn that starts on the center tile (normally impossible in play) cannot slide in any direction.
@@ -241,5 +241,6 @@ White wins immediately — the game ends as soon as the king enters the center.
 - Added tile colors: every playable tile has one of 4 colors (green, blue, yellow, brown), 15 tiles each.
 - Added center tile rule: e5 is white and impassable — no piece may enter or be placed on it.
 - Added capture tile-color rule: on the 1st move, a piece can only capture an enemy if there is a tile of the same color as the capturing piece's starting tile along the movement path to the target (inclusive). This applies to all capture types: single-step, horse, pawn slide, and commander aura hops.
+- Refined capture tile-color validation: matching tiles that are only before the target on the capture line no longer qualify; the match must be on the target square or beyond it.
 - Removed teacher piece and all transformation mechanics from the ruleset.
 - Added placement color restriction: players may only place on tile colors they already occupy with at least one on-board piece.

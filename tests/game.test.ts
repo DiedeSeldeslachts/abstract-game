@@ -169,6 +169,25 @@ function placePiece(
   assert.throws(() => applyPlacement(state, target!, "pawn"), /tile color you already occupy/i);
 })();
 
+(function testCommanderUnlocksPlacementColor(): void {
+  const state = createEmptyState("white");
+
+  placePiece(state, 8, 8, "white", "commander", "anchor");
+  const commanderColor = getTileColor(state, 8, 8)!;
+  state.tileColors["7,8"] = commanderColor;
+
+  const placements = getLegalPlacements(state, "white");
+
+  assert.ok(
+    placements.some((placement) => placement.to.row === 7 && placement.to.col === 8),
+    "a commander on a color should unlock placements on that color"
+  );
+
+  const afterPlacement = applyPlacement(state, { row: 7, col: 8 }, "pawn");
+  assert.equal(getPiece(afterPlacement, 7, 8)?.player, "white");
+  assert.equal(getPiece(afterPlacement, 7, 8)?.type, "pawn");
+})();
+
 (function testPlacementLimitIsEnforced(): void {
   let state = createInitialState();
   const whiteSquares: Coordinate[] = [
@@ -310,6 +329,28 @@ function placePiece(
   const moves = getLegalMoves(state, 4, 3);
 
   assert.ok(moves.some((move) => move.row === 3 && move.col === 3 && move.capture));
+})();
+
+(function testPawnCannotCaptureWhenOnlyPreTargetTileMatchesColor(): void {
+  const state = createEmptyState("black");
+
+  // Repro case: black pawn starts on town g5 and targets edge i5.
+  placePiece(state, 4, 6, "black", "pawn", "attacker");
+  placePiece(state, 4, 8, "white", "pawn", "target");
+
+  const startColor = getTileColor(state, 4, 6)!;
+  const nonMatchingColor = startColor === "yellow" ? "green" : "yellow";
+
+  // h5 (between attacker and target) matches, but i5 (target) does not.
+  state.tileColors["4,7"] = startColor;
+  state.tileColors["4,8"] = nonMatchingColor;
+
+  const moves = getLegalMoves(state, 4, 6);
+
+  assert.ok(
+    !moves.some((move) => move.row === 4 && move.col === 8 && move.capture),
+    "capture should be illegal when matching color exists only before target"
+  );
 })();
 
 (function testHorseMovesOneOrTwoSquaresStraight(): void {

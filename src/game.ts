@@ -686,8 +686,10 @@ function isCaptureAllowedByTileColor(
   const startColor = getTileColor(state, fromRow, fromCol);
   if (!startColor || startColor === "white") return false;
 
-  let r = fromRow + stepRow;
-  let c = fromCol + stepCol;
+  // A capture is valid only if a matching color appears on the target square
+  // or further along the same movement line.
+  let r = toRow;
+  let c = toCol;
   while (isEnterableSquare(r, c)) {
     if (getTileColor(state, r, c) === startColor) return true;
     r += stepRow;
